@@ -1,0 +1,31 @@
+id: stub-addr-shares-port-parsing-with-forward-addr
+title:
+  en: "stub-addr goes through the same authextstrtoaddr() as forward-addr, so its port is truncated the same way"
+  ja: stub-addr は forward-addr と同じ authextstrtoaddr() を通るのでポートの切り詰めも同じ
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_hints.c read_stubs_addr() and iterator/iter_fwd.c read_fwds_addr() both call util/net_help.c authextstrtoaddr(). On the config side, util/configparser.y also does cfg_strlist_insert() into the same struct config_stub"
+  ja: "iterator/iter_hints.c read_stubs_addr() と iterator/iter_fwd.c read_fwds_addr() がどちらも util/net_help.c authextstrtoaddr() を呼ぶ。設定側も util/configparser.y で同じ struct config_stub に cfg_strlist_insert() する"
+manual:
+  en: "doc/unbound.conf.5.in, stub-addr entry: To use a non-default port for DNS communication append '@' with the port number. (the same text as the forward-addr entry; neither gives the valid range)"
+  ja: "doc/unbound.conf.5.in stub-addr の項: To use a non-default port for DNS communication append '@' with the port number.（forward-addr の項と同文で、値域の記述はどちらにもない）"
+layers:
+  en: ["address parsing"]
+  ja: ["アドレス分解"]
+status: verified
+config: |
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@70000
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:4464"
+  query: "www.example.com. A"
+  note:
+    en: "The @70000 -> 4464 confirmed for forward-addr applies to stub-addr unchanged"
+    ja: "forward-addr で確認した @70000 -> 4464 が stub-addr にもそのまま当てはまる"

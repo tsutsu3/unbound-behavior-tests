@@ -1,0 +1,29 @@
+id: conf-lexer-backslash-not-resolved
+title:
+  en: "The lexer does not resolve backslash escapes and hands them to the RR parser"
+  ja: レキサはバックスラッシュエスケープを解かず後段の RR パーサへ渡す
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configlexer.lex. DQANY/SQANY/UNQUOTEDLETTER only accept \\\\. as one two-character unit, and yytext is strdup()ed unchanged. The escape is resolved later, in sldns/parseutil.c sldns_parse_char()"
+  ja: "util/configlexer.lex。DQANY/SQANY/UNQUOTEDLETTER は \\\\. を 2 文字としてまとめて受理するだけで、yytext をそのまま strdup する。解決は sldns/parseutil.c sldns_parse_char() 側"
+manual:
+  en: "none (the FILE FORMAT section says nothing about backslashes; searched for 'backslash' and 'escape')"
+  ja: "none（FILE FORMAT 節にバックスラッシュの記述がない。'backslash' 'escape' で検索）"
+layers:
+  en: ["config file lexer", "RR owner name to dname conversion"]
+  ja: ["設定ファイルの字句解析", "RR オーナー名の dname 変換"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "a\.b.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "a\\.b.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.0.2.1"]
+  note:
+    en: "If the lexer resolved \\. to . the owner name would have 4 labels and would not match this 3-label query"
+    ja: "レキサが \\. を . に解いていればオーナー名は 4 ラベルになり、3 ラベルのこの問い合わせには一致しない"

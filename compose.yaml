@@ -1,0 +1,64 @@
+# Shorthands for the things this repository is run for:
+#
+#   docker compose run --rm tests            run every case
+#   docker compose run --rm tests -k <id>    run a single case
+#   docker compose run --rm gen              regenerate the tables in out/
+#   docker compose run --rm lint             ruff check .
+#   docker compose run --rm shell            poke around inside the container
+#
+# The working tree is mounted at /work, so editing cases/*.yaml or the runner
+# does not need an image rebuild.  Rebuild (docker compose build) only after
+# changing the Dockerfile or pyproject.toml / uv.lock.
+#
+# The Python dependencies live in /opt/venv inside the image, outside the
+# mount, so the mount does not hide them.
+
+x-base: &base
+  build:
+    context: .
+  image: unbound-behavior-tests:1.26.0
+  volumes:
+    - .:/work
+  working_dir: /work
+  # unbound is started and stopped over and over; let PID 1 reap any process
+  # that slips through.
+  init: true
+
+services:
+  # Runs the cases.  Binding the default ports needs root (the case where
+  # forward-addr's #name sends traffic to port 853 has to be observed), so the
+  # user is left as is.
+  # The network stays the default bridge.  The container has its own loopback,
+  # so a fake upstream holding 127.0.0.1:853 and the like cannot clash with
+  # the host.
+  tests:
+    <<: *base
+    entrypoint: ["pytest"]
+    command: ["-q"]
+
+  # Generates the tables.  It writes out/*.md on the host, so it runs as the
+  # host user.  If your uid/gid is not 1000, pass UID / GID to override:
+  #   UID=$(id -u) GID=$(id -g) docker compose run --rm gen
+  gen:
+    <<: *base
+    user: "${UID:-1000}:${GID:-1000}"
+    entrypoint: ["python"]
+    command: ["gen.py"]
+
+  # Ruff.  --fix and format rewrite files on the host, so like gen it runs as
+  # the host user.
+  #   docker compose run --rm lint                 ruff check .
+  #   docker compose run --rm lint format --check .
+  #   docker compose run --rm lint check --fix .
+  lint:
+    <<: *base
+    user: "${UID:-1000}:${GID:-1000}"
+    entrypoint: ["ruff"]
+    command: ["check", "."]
+
+  # For poking around.  unbound / unbound-checkconf / dig / pytest / ruff are
+  # installed.
+  shell:
+    <<: *base
+    entrypoint: ["bash"]
+    command: []

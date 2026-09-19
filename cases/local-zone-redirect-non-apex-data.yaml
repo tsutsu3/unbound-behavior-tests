@@ -1,0 +1,28 @@
+id: local-zone-redirect-non-apex-data
+title:
+  en: "In a redirect zone, local-data that does not exactly match the apex is a fatal error"
+  ja: redirect ゾーンの local-data は頂点と完全一致でなければ fatal error になる
+chapter: "5.4"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c lz_enter_rr_into_zone(). When z->type is local_zone_redirect / local_zone_inform_redirect and query_dname_compare(z->name, nm) != 0, it does log_err and returns 0"
+  ja: "services/localzone.c lz_enter_rr_into_zone()。z->type が local_zone_redirect / local_zone_inform_redirect のとき query_dname_compare(z->name, nm) != 0 で log_err して 0 を返す"
+manual:
+  en: "doc/unbound.conf.5.in, `redirect` entry: There may be no local data beneath the zone name."
+  ja: "doc/unbound.conf.5.in `redirect` の項: There may be no local data beneath the zone name."
+layers:
+  en: ["zone apex dname comparison", "local-data zone registration"]
+  ja: ["ゾーン頂点の dname 比較", "local-data のゾーン登録"]
+status: verified
+config: |
+  local-zone: "example.com." redirect
+  local-data: "example.com. A 192.0.2.1"
+  local-data: "www.example.com. A 192.0.2.2"
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "local-data in redirect zone must reside at top of zone"
+  note:
+    en: "The man page says there may be none, but not that such data stops startup instead of being ignored"
+    ja: "man は「置いてはならない」とは書くが、無視されるのではなく起動を止めることは書いていない"

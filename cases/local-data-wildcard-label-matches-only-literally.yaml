@@ -1,0 +1,30 @@
+id: local-data-wildcard-label-matches-only-literally
+title:
+  en: "local-data containing * matches only queries for the literal name *"
+  ja: "* を含む local-data は * という名前そのものへの問い合わせにだけ一致する"
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "sldns/str2wire.c sldns_str2wire_dname_buf_rel() does not treat * specially and writes it as a one-character label. The local_data tree lookup in services/localzone.c, local_zone_find_data() / rbtree_search(), is an exact match, so only a name with the same stored * label matches"
+  ja: "sldns/str2wire.c sldns_str2wire_dname_buf_rel() は * を特別扱いせず 1 文字のラベル内容として書く。services/localzone.c の local_data ツリー検索 local_zone_find_data() / rbtree_search() は完全一致なので、格納された * ラベルと同じ名前だけが一致する"
+manual:
+  en: "none (`unbound.conf.5.in` does not say how local-data containing a wildcard is stored; it only advises using a stub-zone for wildcards)"
+  ja: "none（`unbound.conf.5.in` に、ワイルドカードを書いた local-data がどう格納されるかの記述はない。ワイルドカードは stub-zone を使えという案内があるだけ）"
+layers:
+  en: ["RR owner name to dname conversion"]
+  ja: ["RR オーナー名の dname 変換"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "*.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "*.example.com. A"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ["192.0.2.1"]
+  note:
+    en: "The setting is not silently ignored: a record named * really exists. That is also why checkconf passes"
+    ja: "設定が黙って無視されているのではなく、* という名前のレコードとして実在している。だから checkconf も通る"

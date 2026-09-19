@@ -1,0 +1,26 @@
+id: local-zone-override-accepts-truncate
+title:
+  en: "local-zone-override accepts truncate, which local-zone: rejects"
+  ja: "local-zone-override は local-zone: が拒否する truncate を受理する"
+chapter: "5.3"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "util/configparser.y server_local_zone_override does not validate the type and only does cfg_str3list_insert(). services/localzone.c lz_enter_override() uses local_zone_str2type(), so truncate and nodefault, which are not in the list local-zone: accepts, also pass"
+  ja: "util/configparser.y server_local_zone_override は type を検証せず cfg_str3list_insert() するだけ。services/localzone.c lz_enter_override() が local_zone_str2type() を使うため、local-zone: の受理リストにない truncate と nodefault も通る"
+manual:
+  en: "doc/unbound.conf.5.in L3486-: Use this localzone type, regardless the type configured for the local zone ... (nothing on which types can be used)"
+  ja: "doc/unbound.conf.5.in L3486-: Use this localzone type, regardless the type configured for the local zone ...（使える type の範囲について記述がない）"
+layers:
+  en: ["type validation in the grammar", "type conversion at override registration"]
+  ja: ["文法規則の type 検証", "override 登録時の type 変換"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-zone-override: "example.com." 127.0.0.0/8 truncate
+command: unbound-checkconf
+expect:
+  exit: 0
+  note:
+    en: "The same truncate is a syntax error in local-zone: (local-zone-type-truncate-rejected-in-conf). The set of accepted types differs per directive"
+    ja: "同じ truncate が local-zone: では文法エラーになる（local-zone-type-truncate-rejected-in-conf）。受理される type の集合がディレクティブごとに違う"

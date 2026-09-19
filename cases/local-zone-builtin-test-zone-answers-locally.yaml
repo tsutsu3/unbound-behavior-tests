@@ -1,0 +1,28 @@
+id: local-zone-builtin-test-zone-answers-locally
+title:
+  en: "With no configuration at all, test. answers as a built-in static zone"
+  ja: 何も設定しなくても test. は組み込みの static ゾーンとして応答する
+chapter: "5.6"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c default_zones_special_array lists test. invalid. onion. home.arpa. resolver.arpa. service.arpa., and local_zone_enter_defaults() adds a static zone with SOA / NS for each through add_empty_default()"
+  ja: "services/localzone.c default_zones_special_array に test. invalid. onion. home.arpa. resolver.arpa. service.arpa. が並び、local_zone_enter_defaults() が add_empty_default() で static ゾーンと SOA / NS を入れる"
+manual:
+  en: "doc/unbound.conf.5.in L3199-: The default zones are localhost, reverse 127.0.0.1 and ::1, the home.arpa, resolver.arpa, service.arpa, onion, test, invalid and the AS112 zones."
+  ja: "doc/unbound.conf.5.in L3199-: The default zones are localhost, reverse 127.0.0.1 and ::1, the home.arpa, resolver.arpa, service.arpa, onion, test, invalid and the AS112 zones."
+layers:
+  en: ["built-in zone registration"]
+  ja: ["組み込みゾーンの登録"]
+status: verified
+config: |
+  # no local-zone and no local-data at all: only the built-in defaults
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "test. SOA"
+  rcode: "NOERROR"
+  answer_contains: ["nobody.invalid."]
+  note:
+    en: "The built-in zones total 104: localhost. (redirect) + 2 reverse + 6 special + 95 AS112"
+    ja: "組み込みは localhost.(redirect) + 逆引き 2 + special 6 + AS112 95 の計 104 ゾーン"

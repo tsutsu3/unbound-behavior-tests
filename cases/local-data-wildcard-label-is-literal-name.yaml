@@ -1,0 +1,29 @@
+id: local-data-wildcard-label-is-literal-name
+title:
+  en: "local-data wildcards are not expanded; the name is a literal that contains *"
+  ja: "local-data のワイルドカードは展開されず、* を含むリテラル名になる"
+chapter: "5.5"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c has no wildcard matching. The only use of dname_is_wild() is CNAME target expansion in local_zone_answer_cname() (L1593), not owner name matching. The comment at local_zones_zone_answer() L1728 also says no additional section processing, cname, dname or wildcard processing. The name is converted to wire form unchanged by sldns_str2wire_dname(), and * is stored as a one-byte label"
+  ja: "services/localzone.c にワイルドカード照合が無い。dname_is_wild() の参照は local_zone_answer_cname() の CNAME ターゲット展開（L1593）だけで、オーナー名の照合には使われない。local_zones_zone_answer() L1728 のコメントも no additional section processing, cname, dname or wildcard processing と明記する。名前は sldns_str2wire_dname() でそのままワイヤ化され、* は 1 バイトのラベル内容として格納される"
+manual:
+  en: "doc/unbound.conf.5.in L2935-L2938 and L3455-L3458: If you need more complicated authoritative data, with referrals, wildcards, CNAME/DNAME support, or DNSSEC authoritative service, setup a stub-zone for it as detailed in the stub zone section below."
+  ja: "doc/unbound.conf.5.in L2935-L2938 および L3455-L3458: If you need more complicated authoritative data, with referrals, wildcards, CNAME/DNAME support, or DNSSEC authoritative service, setup a stub-zone for it as detailed in the stub zone section below."
+layers:
+  en: ["RR owner name to dname conversion", "zone data lookup (no wildcard processing)"]
+  ja: ["RR オーナー名の dname 変換", "ゾーンデータの照合（ワイルドカード処理が無い）"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "*.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. A"
+  rcode: "NXDOMAIN"
+  answer_count: 0
+  note:
+    en: "The man page says to use a stub-zone if you need wildcards, but writing one anyway is not an error. It silently becomes a setting that does nothing. To point a whole subtree at one answer, use the redirect type"
+    ja: "man はワイルドカードが要るなら stub-zone を使えと書くが、書いてしまってもエラーにはならない。無言で「効かない設定」になる。サブドメイン全体を 1 つの答えに向けたいなら redirect 型を使う"

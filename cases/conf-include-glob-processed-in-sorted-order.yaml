@@ -1,0 +1,34 @@
+id: conf-include-glob-processed-in-sorted-order
+title:
+  en: "include: wildcards are read in sorted file name order, and the last file wins"
+  ja: "include: のワイルドカードはファイル名のソート順で読まれ、最後のファイルが勝つ"
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configlexer.lex config_start_include_glob() does not set GLOB_NOSORT (there is a comment: do not set GLOB_NOSORT so the results are sorted and in a predictable order). It then pushes the files onto the include stack in reverse with for(i=(int)g.gl_pathc-1; i>=0; i--), so they are popped in sorted order. Head insertion in cfg_str2list_insert() then makes the line read last win"
+  ja: "util/configlexer.lex config_start_include_glob() は GLOB_NOSORT を立てない（do not set GLOB_NOSORT so the results are sorted and in a predictable order というコメントがある）。そのうえで for(i=(int)g.gl_pathc-1; i>=0; i--) と逆順にインクルードスタックへ積むので、取り出す順序はソート順になる。あとは cfg_str2list_insert() の先頭挿入で最後に読まれた行が勝つ"
+manual:
+  en: "doc/unbound.conf.5.in INCLUDING FILES: Wildcards can be used to include multiple files, see glob(7). (nothing about the read order)"
+  ja: "doc/unbound.conf.5.in INCLUDING FILES: Wildcards can be used to include multiple files, see glob(7).（読み込み順については記述がない）"
+layers:
+  en: ["glob expansion order", "include expansion", "config list build order (head insertion)"]
+  ja: ["glob 展開の順序", "インクルード展開", "設定リストの構築順（先頭挿入）"]
+status: verified
+config: |
+  include: "conf.d/*.conf"
+files:
+  conf.d/10-first.conf: |
+    server:
+        local-zone: "example.com." static
+  conf.d/20-second.conf: |
+    server:
+        local-zone: "example.com." refuse
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. A"
+  rcode: "REFUSED"
+  note:
+    en: "20- beats 10-. Wildcard expansion for unbound -c itself is done by util/config_file.c config_read(), which does set GLOB_NOSORT, so its order is not guaranteed. That is a different path from include:"
+    ja: "20- が 10- に勝つ。なお unbound -c 自体のワイルドカード展開は util/config_file.c config_read() が担当し、そちらは GLOB_NOSORT を立てるので順序が保証されない。include: の中とは別の経路"

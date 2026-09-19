@@ -1,0 +1,30 @@
+id: local-data-ptr-is-rewritten-to-local-data
+title:
+  en: "local-data-ptr is rewritten into a PTR local-data string at config parse time"
+  ja: local-data-ptr は設定パース時に PTR の local-data 文字列へ書き換えられる
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configparser.y server_local_data_ptr puts the result of cfg_ptr_reverse() into cfg->local_data. util/config_file.c cfg_ptr_reverse() turns \"<IP> [words in between] <name>\" into \"<reverse name>. [words in between] PTR <name>\". From there the path is exactly the same as local-data"
+  ja: "util/configparser.y server_local_data_ptr が cfg_ptr_reverse() の結果を cfg->local_data に入れる。util/config_file.c cfg_ptr_reverse() が \"<IP> [間の語] <name>\" を \"<逆引き名>. [間の語] PTR <name>\" に組み立てる。以降の経路は local-data と完全に同一"
+manual:
+  en: "doc/unbound.conf.5.in, local-data-ptr entry: Configure local data shorthand for a PTR record with the reversed IPv4 or IPv6 address and the host name."
+  ja: "doc/unbound.conf.5.in local-data-ptr の項: Configure local data shorthand for a PTR record with the reversed IPv4 or IPv6 address and the host name."
+layers:
+  en: ["string rewrite at config parse time"]
+  ja: ["設定パース時の文字列書き換え"]
+status: verified
+config: |
+  local-zone: "2.0.192.in-addr.arpa." static
+  local-data-ptr: "192.0.2.4 www.example.com"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "4.2.0.192.in-addr.arpa. PTR"
+  rcode: "NOERROR"
+  answer_ttl: 3600
+  answer_contains: ["www.example.com."]
+  note:
+    en: "The default TTL is also 3600, as with local-data. It is not a separate path"
+    ja: "TTL の既定も local-data と同じ 3600。別経路ではない"

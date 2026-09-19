@@ -1,0 +1,31 @@
+id: local-zone-duplicate-keeps-both-local-data
+title:
+  en: "On a duplicate only the local-zone line is discarded; all the local-data goes into one zone"
+  ja: 重複時に捨てられるのは local-zone 行だけで local-data は 1 つのゾーンに集まる
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c lz_enter_zones() discards the duplicate zone, but lz_enter_data() walks cfg->local_data and lz_enter_rr_str() looks up the covering zone for each record, so the local-data from both blocks remains"
+  ja: "services/localzone.c lz_enter_zones() は重複ゾーンを捨てるが、local-data は lz_enter_data() が cfg->local_data を走査して lz_enter_rr_str() で覆うゾーンを検索して入れるため、どちらの記述ブロックのものも残る"
+manual:
+  en: "none (the man page says nothing about duplicate local-zone)"
+  ja: "none（重複 local-zone に関する記述が man にない）"
+layers:
+  en: ["duplicate handling at zone registration", "covering zone lookup for local-data"]
+  ja: ["ゾーン登録時の重複処理", "local-data の被覆ゾーン検索"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "one.example.com. A 192.0.2.1"
+  local-zone: "example.com." static
+  local-data: "two.example.com. A 192.0.2.2"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "one.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.0.2.1"]
+  note:
+    en: "The local-data under the discarded side (the local-zone line written first) can still be queried"
+    ja: "捨てられた側（先に書いた local-zone 行）に付いていた local-data が引ける"

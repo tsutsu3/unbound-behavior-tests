@@ -1,0 +1,27 @@
+id: local-zone-override-requires-exact-zone
+title:
+  en: "local-zone-override is a fatal error unless a local-zone with the same name already exists"
+  ja: local-zone-override は同名の local-zone が既に存在しないと fatal error になる
+chapter: "5.3"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c lz_enter_override() logs log_err(\"no local-zone for local-zone-override %s\") and returns 0 when local_zones_find() (an exact-match lookup) finds nothing. lz_enter_overrides() stops on 0"
+  ja: "services/localzone.c lz_enter_override() が local_zones_find()（完全一致検索）で見つからなければ log_err(\"no local-zone for local-zone-override %s\") を出して 0 を返す。lz_enter_overrides() は 0 で打ち切る"
+manual:
+  en: "doc/unbound.conf.5.in L3486-: Override the local zone type for queries from addresses matching netblock. Use this localzone type, regardless the type configured for the local zone (both tagged and untagged) and regardless the type configured using access-control-tag-action."
+  ja: "doc/unbound.conf.5.in L3486-: Override the local zone type for queries from addresses matching netblock. Use this localzone type, regardless the type configured for the local zone (both tagged and untagged) and regardless the type configured using access-control-tag-action."
+layers:
+  en: ["exact-match zone tree lookup", "insertion into the override tree"]
+  ja: ["ゾーン木の完全一致検索", "override 木への挿入"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-zone-override: "sub.example.com." 127.0.0.0/8 refuse
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "no local-zone for local-zone-override"
+  note:
+    en: "The man page mentions neither that the local-zone must already exist nor that the name must match exactly"
+    ja: "man は前提となる local-zone の存在にも、名前が完全一致でなければならないことにも触れていない"

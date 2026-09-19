@@ -1,0 +1,32 @@
+id: forward-no-cache-repeat-query-hits-upstream
+title:
+  en: "With forward-no-cache: yes, does a repeated identical query also go upstream?"
+  ja: "forward-no-cache: yes のとき 2 回目の同一問い合わせも上流へ出るか"
+chapter: "6.5"
+category: undecided
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_fwd.c read_forwards() sets dp->no_cache = s->no_cache. It plays no part in choosing the destination. To see from outside whether the cache is used, the upstream must first return an answer that can enter the cache"
+  ja: "iterator/iter_fwd.c read_forwards() が dp->no_cache = s->no_cache を設定する。宛先の決定には関与しない。キャッシュを経由するかどうかを外から見るには、上流が応答を返して初めてキャッシュに入る必要がある"
+manual:
+  en: "doc/unbound.conf.5.in, forward-no-cache entry: If enabled, data inside the forward is not cached. This is useful when you want immediate changes to be visible."
+  ja: "doc/unbound.conf.5.in forward-no-cache の項: If enabled, data inside the forward is not cached. This is useful when you want immediate changes to be visible."
+layers:
+  en: ["forwarder list construction", "cache control"]
+  ja: ["転送先リストの構築", "キャッシュ制御"]
+status: inconclusive
+config: |
+  forward-zone:
+    name: "."
+    forward-no-cache: yes
+    forward-addr: 127.0.0.1@5404
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5404"
+  query: "example.com. A"
+  note:
+    en: "This case is not run. By design the fake upstream in runner/upstream.py never answers, so it cannot tell whether an answer was cached. Deciding it needs an upstream that answers and a way to send the same query twice and count whether the second one arrives too. That needs a design decision, so the case stays open"
+    ja: "このケースは実行しない。runner/upstream.py の偽上流は 方針として応答を返さないため、応答がキャッシュされたか否かを区別できない。判定には「応答を返す偽上流」と「同じ問い合わせを 2 回送って 2 回目も届くか数える」仕組みが要る。設計判断が要るので未確定のまま残す"

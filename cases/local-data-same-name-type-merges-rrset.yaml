@@ -1,0 +1,31 @@
+id: local-data-same-name-type-merges-rrset
+title:
+  en: "local-data with the same name and type are merged into one RRset, in the order written"
+  ja: 同名同型の local-data は 1 つの RRset にまとめられ、記述順で並ぶ
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zone_enter_rr() reuses the existing RRset through local_data_find_type() and adds to it with rrset_insert_rr(). cfg->local_data is built by head insertion, so it is reversed, and rrset_insert_rr inserts at index 0, so the two reversals restore the written order"
+  ja: "services/localzone.c local_zone_enter_rr() が local_data_find_type() で既存 RRset を再利用し rrset_insert_rr() で追加する。cfg->local_data は先頭挿入で逆順、rrset_insert_rr は添字 0 に挿入するので、2 度の反転で記述順に戻る"
+manual:
+  en: "none (nothing on what happens when several local-data share a name and type)"
+  ja: "none（同名同型の local-data を複数書いたときの扱いの記述がない）"
+layers:
+  en: ["config list build order (head insertion)", "RR insertion position in the RRset"]
+  ja: ["設定リストの構築順（先頭挿入）", "RRset への RR 挿入位置"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+  local-data: "www.example.com. A 192.0.2.2"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_count: 2
+  answer_contains: ["192.0.2.1", "192.0.2.2"]
+  note:
+    en: "Records are added, not overwritten. A completely identical RR is ignored by rr_is_duplicate()"
+    ja: "上書きではなく追加。完全に同一の RR は rr_is_duplicate() で無視される"

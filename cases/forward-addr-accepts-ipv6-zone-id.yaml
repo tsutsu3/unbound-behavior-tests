@@ -1,0 +1,31 @@
+id: forward-addr-accepts-ipv6-zone-id
+title:
+  en: "forward-addr accepts an IPv6 zone ID and turns it into sin6_scope_id"
+  ja: forward-addr は IPv6 zone ID を受理し sin6_scope_id にする
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/net_help.c ipstrtoaddr() splits off the %, stores if_nametoindex(s+1) in sa->sin6_scope_id and then calls inet_pton(). sldns/str2wire.c sldns_str2wire_aaaa_buf() has no such handling"
+  ja: "util/net_help.c ipstrtoaddr() が % を切り出し、if_nametoindex(s+1) を sa->sin6_scope_id に入れてから inet_pton() を呼ぶ。sldns/str2wire.c sldns_str2wire_aaaa_buf() には同じ処理がない"
+manual:
+  en: "none (the forward-addr entry does not mention zone IDs)"
+  ja: "none（forward-addr の項に zone ID の記述がない）"
+layers:
+  en: ["socket address construction", "RR rdata to wire conversion (for contrast)"]
+  ja: ["ソケットアドレス生成", "RR rdata のワイヤ変換（対比先）"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: ::1%lo@5403
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "::1:5403"
+  query: "example.com. A"
+  note:
+    en: "The same %lo notation is rejected in a local-data AAAA. Whether it is accepted is decided by the function that parses it, not by what a zone ID means"
+    ja: "同じ %lo という表記が local-data の AAAA では拒否される。可否がゾーン ID の意味ではなく処理する関数で決まっている"

@@ -1,0 +1,33 @@
+id: conf-include-later-line-wins
+title:
+  en: "An included file is placed at the include: position, and lines written after it win"
+  ja: "include: した設定は展開位置に置かれ、その後に書いた行が勝つ"
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configlexer.lex config_start_include() swaps the input buffer with yy_switch_to_buffer() and config_end_include() restores it at EOF, so as a token stream the file is expanded exactly at the include: position. util/config_file.c cfg_str2list_insert() then inserts at the head, so the line read later comes first in cfg->local_zones, and services/localzone.c lz_enter_zones() registers it first, so it wins"
+  ja: "util/configlexer.lex config_start_include() が yy_switch_to_buffer() で入力バッファを差し替え、EOF で config_end_include() が戻すので、トークン列としては include: の位置にそのまま展開される。そのうえで util/config_file.c cfg_str2list_insert() が先頭挿入なので、後に読まれた行が cfg->local_zones の先頭に来て、services/localzone.c lz_enter_zones() が先に登録して勝つ"
+manual:
+  en: "doc/unbound.conf.5.in INCLUDING FILES: Processing continues as if the text from the included file was copied into the config file at that point."
+  ja: "doc/unbound.conf.5.in INCLUDING FILES: Processing continues as if the text from the included file was copied into the config file at that point."
+layers:
+  en: ["include expansion", "config list build order (head insertion)", "duplicate handling at zone registration"]
+  ja: ["インクルード展開", "設定リストの構築順（先頭挿入）", "ゾーン登録時の重複処理"]
+status: verified
+config: |
+  include: "common.conf"
+  local-zone: "example.com." refuse
+files:
+  common.conf: |
+    server:
+        local-zone: "example.com." static
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. A"
+  rcode: "REFUSED"
+  stderr_contains: "duplicate local-zone example.com."
+  note:
+    en: "Including shared settings and overriding them locally does work. But it is not an override: the line read earlier is discarded as a duplicate"
+    ja: "共通設定を include して個別設定で上書きする、という書き方は成立する。ただし「上書き」ではなく「先に読まれた行が重複として捨てられる」"

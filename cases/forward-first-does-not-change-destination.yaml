@@ -1,0 +1,32 @@
+id: forward-first-does-not-change-destination
+title:
+  en: "forward-first does not change the destination, only the fallback behaviour"
+  ja: forward-first は宛先を変えず、フォールバック側の挙動だけを変える
+chapter: "6.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_fwd.c read_forwards() only uses isfirst for dp->has_parent_side_NS = !s->isfirst, which does not affect the destinations built by read_fwds_addr()"
+  ja: "iterator/iter_fwd.c read_forwards() は isfirst を dp->has_parent_side_NS = !s->isfirst に使うだけで、read_fwds_addr() が作る宛先には影響しない"
+manual:
+  en: "doc/unbound.conf.5.in, forward-first entry: If a forwarded query is met with a SERVFAIL error and this option is enabled Unbound will fall back to less specific resolution."
+  ja: "doc/unbound.conf.5.in forward-first の項: If a forwarded query is met with a SERVFAIL error and this option is enabled Unbound will fall back to less specific resolution."
+layers:
+  en: ["forwarder list construction", "fallback decision"]
+  ja: ["転送先リストの構築", "フォールバック判定"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-first: yes
+    forward-addr: 127.0.0.1@5402
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5402"
+  query: "example.com. A"
+  note:
+    en: "The fallback side (whether it goes out after a SERVFAIL) cannot be observed offline. This case only confirms that the destination does not change"
+    ja: "フォールバック側（SERVFAIL 後に外へ出るか）はオフラインでは観測できない。ここで確認したのは宛先が変わらないことだけ"

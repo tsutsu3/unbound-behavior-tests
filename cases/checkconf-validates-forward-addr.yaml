@@ -1,0 +1,28 @@
+id: checkconf-validates-forward-addr
+title:
+  en: "unbound-checkconf validates the forward-addr address string itself"
+  ja: "unbound-checkconf は forward-addr のアドレス文字列まで検証する"
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "smallapp/unbound-checkconf.c checkconf() calls check_fwd() and check_hints() after morechecks(), and they run the same forwards_apply_cfg() / hints_apply_cfg() as the daemon. The actual failure is authextstrtoaddr() in iterator/iter_fwd.c read_fwds_addr()"
+  ja: "smallapp/unbound-checkconf.c checkconf() が morechecks() のあとに check_fwd() と check_hints() を呼び、そこで daemon と同じ forwards_apply_cfg() / hints_apply_cfg() を実行する。実際の失敗箇所は iterator/iter_fwd.c read_fwds_addr() の authextstrtoaddr()"
+manual:
+  en: "none (`unbound-checkconf.8.in` only says it checks the configuration file and does not list what is validated)"
+  ja: "none（`unbound-checkconf.8.in` は Checks the configuration file とだけ書き、検証範囲を列挙していない）"
+layers:
+  en: ["what checkconf checks", "address parsing at startup"]
+  ja: ["checkconf の検査範囲", "起動時のアドレス解釈"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: not-an-ip-address
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "cannot parse forward . ip address"
+  note:
+    en: "Reading only morechecks() suggests the address is not validated, but checkconf goes as far as applying the forwarding configuration. Only the @port range passes, because authextstrtoaddr() itself does not check it"
+    ja: "morechecks() だけを読むと検証していないように見えるが、checkconf は転送設定の適用まで実行する。@ポートの値域だけは authextstrtoaddr() 自体が検査しないので通る"

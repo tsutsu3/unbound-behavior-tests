@@ -1,0 +1,28 @@
+id: local-zone-implicit-transparent-gives-nodata
+title:
+  en: "In an implicit transparent zone, a query for the same name with another type gets NODATA"
+  ja: 暗黙の transparent ゾーンでは同名別型の問い合わせが NODATA になる
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c lz_setup_implicit() creates a local_zone_transparent zone. transparent returns NOERROR/NODATA when the name exists but the type does not"
+  ja: "services/localzone.c lz_setup_implicit() が local_zone_transparent のゾーンを作る。transparent は同名で型が無い場合 NOERROR/NODATA を返す"
+manual:
+  en: "doc/unbound.conf.5.in, transparent entry: If the query is for a name given in local-data but no such type of data is given in localdata, then a NOERROR NODATA answer is returned."
+  ja: "doc/unbound.conf.5.in transparent の項: If the query is for a name given in local-data but no such type of data is given in localdata, then a NOERROR NODATA answer is returned."
+layers:
+  en: ["implicit zone creation", "answer generation per zone type"]
+  ja: ["暗黙ゾーン生成", "ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-data: "a.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "a.example.com. AAAA"
+  rcode: "NOERROR"
+  answer_count: 0
+  note:
+    en: "This also confirms that nothing is sent to an outside server"
+    ja: "外部に問い合わせに行かないことの確認でもある"

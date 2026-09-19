@@ -1,0 +1,26 @@
+id: local-zone-type-truncate-rejected-in-conf
+title:
+  en: "truncate is a localzone_type but local-zone: does not accept it"
+  ja: "truncate は localzone_type だが local-zone: では受理されない"
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zone_str2type() accepts \"truncate\", but it is not in the accepted list of util/configparser.y server_local_zone, so it is a yyerror"
+  ja: "services/localzone.c local_zone_str2type() は \"truncate\" を受理するが、util/configparser.y server_local_zone の受理リストに truncate がないため yyerror になる"
+manual:
+  en: "none (the word truncate does not appear once in `unbound.conf.5.in`; a full-text search for 'truncate' finds nothing)"
+  ja: "none（`unbound.conf.5.in` に truncate という語が 1 度も現れない。'truncate' で全文検索して 0 件）"
+layers:
+  en: ["type validation in the grammar"]
+  ja: ["文法規則の type 検証"]
+status: verified
+config: |
+  local-zone: "example.com." truncate
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "local-zone type: expected static"
+  note:
+    en: "One reason why the number of types local_zone_str2type() accepts differs from the number you can write in local-zone:"
+    ja: "type の総数を数えるとき、local_zone_str2type() の受理数と local-zone: で書ける数が食い違う原因のひとつ"

@@ -1,0 +1,31 @@
+id: local-zone-implicit-transparent-can-land-at-root
+title:
+  en: "local-data with no common parent domain puts the implicit transparent zone at the root"
+  ja: "共通する上位ドメインが無い local-data を並べると暗黙 transparent ゾーンがルートにできる"
+chapter: "5.3"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c lz_setup_implicit(). When the matching label count match is 0, dname_remove_labels() removes every label and one local_zone_transparent zone is created at the root"
+  ja: "services/localzone.c lz_setup_implicit()。一致ラベル数 match が 0 になると dname_remove_labels() で全ラベルが落ち、ルートに local_zone_transparent のゾーンが 1 つ作られる"
+manual:
+  en: "doc/unbound.conf.5.in, local-data entry: If local-data is configured that is not a subdomain of a local-zone, a transparent local-zone is configured."
+  ja: "doc/unbound.conf.5.in local-data の項: If local-data is configured that is not a subdomain of a local-zone, a transparent local-zone is configured."
+layers:
+  en: ["scan of uncovered local-data", "common suffix computation and zone creation"]
+  ja: ["未被覆 local-data の走査", "共通接尾辞の算出とゾーン生成"]
+status: verified
+config: |
+  verbosity: 4
+  local-data: "a.example.com. A 192.0.2.1"
+  local-data: "b.example.org. A 192.0.2.2"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "a.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.0.2.1"]
+  stderr_contains: "implicit transparent local-zone . TYPE0 IN"
+  note:
+    en: "Read literally, the man page's a transparent local-zone is configured suggests one zone per name, but there is one in total, and its position is pulled up by the other local-data"
+    ja: "man の「a transparent local-zone is configured」を素直に読むと各名前に作られるように読めるが、実際は全体で 1 つ、しかも位置が他の local-data に引きずられる"

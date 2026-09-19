@@ -1,0 +1,29 @@
+id: local-zone-name-trailing-dot-and-case-are-same-zone
+title:
+  en: "local-zone names ignore the trailing dot and letter case, so different spellings are duplicates of one zone"
+  ja: "local-zone 名は末尾ドットの有無と大文字小文字を区別せず、同じゾーンとして重複扱いになる"
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c parse_dname() → sldns/str2wire.c sldns_str2wire_dname_buf_rel(). If the last character is not . the branch /* add root label if last char was not '.' */ adds the root label, so example.com and example.com. are the same wire name. The zone tree key comparison local_zone_cmp() uses dname_lab_cmp(), which ignores case. So rbtree_insert() detects the duplicate, and lz_enter_zone_dname() logs log_warn(\"duplicate local-zone %s\") and returns the existing zone"
+  ja: "services/localzone.c parse_dname() → sldns/str2wire.c sldns_str2wire_dname_buf_rel()。末尾が . でなければ /* add root label if last char was not '.' */ の分岐でルートラベルを付けるので、example.com と example.com. は同一のワイヤ名になる。ゾーン木のキー比較 local_zone_cmp() は dname_lab_cmp() で大文字小文字を区別しない。したがって rbtree_insert() が重複を検出し、lz_enter_zone_dname() が log_warn(\"duplicate local-zone %s\") を出して既存ゾーンを返す"
+manual:
+  en: "none (the local-zone: entry in `unbound.conf.5.in` says neither whether the trailing dot is required nor how case is handled)"
+  ja: "none（`unbound.conf.5.in` の local-zone: の項に、ゾーン名の末尾ドットの要否も大文字小文字の扱いも記述がない）"
+layers:
+  en: ["config list build order (head insertion)", "zone name wire conversion and normalisation", "duplicate handling at zone registration"]
+  ja: ["設定リストの構築順（先頭挿入）", "ゾーン名のワイヤ変換と正規化", "ゾーン登録時の重複処理"]
+status: verified
+config: |
+  local-zone: "example.com" static
+  local-zone: "EXAMPLE.com." refuse
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. A"
+  rcode: "REFUSED"
+  stderr_contains: "duplicate local-zone example.com."
+  note:
+    en: "Different spellings are the same zone, so as in local-zone-duplicate-last-line-wins the type written last remains. checkconf warns but exits 0"
+    ja: "書き方が違っても同じゾーンなので、local-zone-duplicate-last-line-wins と同じく後に書いた行の type が残る。checkconf は警告を出すが終了コードは 0"

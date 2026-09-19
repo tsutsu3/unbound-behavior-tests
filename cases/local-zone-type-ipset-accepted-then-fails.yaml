@@ -1,0 +1,26 @@
+id: local-zone-type-ipset-accepted-then-fails
+title:
+  en: "ipset passes the grammar but fails at zone registration in builds without ipset support"
+  ja: ipset は文法上は受理されるが ipset 非対応ビルドではゾーン登録で失敗する
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configparser.y server_local_zone includes \"ipset\" in its accepted list. The branch that stores an ipset zone is inside #ifdef USE_IPSET, so in builds without it the zone goes into the normal cfg->local_zones, where local_zone_str2type(\"ipset\") in services/localzone.c lz_enter_zone() returns 0 and registration fails"
+  ja: "util/configparser.y server_local_zone は \"ipset\" を受理リストに含める。ipset を格納する分岐は #ifdef USE_IPSET の中なので、非対応ビルドでは通常の cfg->local_zones に入り、services/localzone.c lz_enter_zone() の local_zone_str2type(\"ipset\") が 0 を返して失敗する"
+manual:
+  en: "none (the word ipset does not appear once in `unbound.conf.5.in`; a full-text search for 'ipset' finds nothing)"
+  ja: "none（`unbound.conf.5.in` に ipset という語が 1 度も現れない。'ipset' で全文検索して 0 件）"
+layers:
+  en: ["type validation in the grammar", "type conversion at zone registration"]
+  ja: ["文法規則の type 検証", "ゾーン登録時の type 変換"]
+status: verified
+config: |
+  local-zone: "example.com." ipset
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "bad lz_enter_zone type"
+  note:
+    en: "The result depends on the build configuration. This one is from a build without --enable-ipset"
+    ja: "検証はビルド構成に依存する。この結果は --enable-ipset なしのビルドのもの"

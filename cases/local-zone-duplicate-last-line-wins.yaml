@@ -1,0 +1,28 @@
+id: local-zone-duplicate-last-line-wins
+title:
+  en: "With duplicate local-zone lines, the type written last in the file remains"
+  ja: 同名 local-zone を重複させると設定ファイルで後に書いた type が残る
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/config_file.c cfg_str2list_insert() inserts at the head, so cfg->local_zones is in reverse order. services/localzone.c lz_enter_zones() registers from the head, and lz_enter_zone_dname() does log_warn and returns the existing zone on a duplicate, so the one registered first, which is the line written last, remains"
+  ja: "util/config_file.c cfg_str2list_insert() が先頭挿入なので cfg->local_zones は記述と逆順。services/localzone.c lz_enter_zones() が先頭から登録し、lz_enter_zone_dname() は重複時に log_warn して既存ゾーンを返すため、先に登録された = 最後に書かれた行が残る"
+manual:
+  en: "none (`unbound.conf.5.in` describes neither how a duplicate local-zone is handled nor the storage order of a repeated directive; searched for 'duplicate', 'twice' and 'last one')"
+  ja: "none（`unbound.conf.5.in` に local-zone の重複時の扱いも、同一ディレクティブ複数回の格納順も記述がない。'duplicate' 'twice' 'last one' で検索）"
+layers:
+  en: ["config list build order (head insertion)", "duplicate handling at zone registration"]
+  ja: ["設定リストの構築順（先頭挿入）", "ゾーン登録時の重複処理"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-zone: "example.com." refuse
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. A"
+  rcode: "REFUSED"
+  note:
+    en: "If static remained the answer would be NXDOMAIN/NODATA. REFUSED shows that the refuse written later remained"
+    ja: "static が残れば NXDOMAIN/NODATA になる。REFUSED になるのは後に書いた refuse が残った証拠"

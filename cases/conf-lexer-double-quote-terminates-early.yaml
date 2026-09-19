@@ -1,0 +1,27 @@
+id: conf-lexer-double-quote-terminates-early
+title:
+  en: "A double quote inside a double-quoted value ends the value there"
+  ja: 二重引用符の中の二重引用符はそこで値を終わらせる
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "The util/configlexer.lex `<quotedstring>\\\"` rule. DQANY = [^\\\"\\n\\r\\\\]|\\\\. so a \" without a backslash before it closes the string"
+  ja: "util/configlexer.lex `<quotedstring>\\\"` 規則。DQANY = [^\\\"\\n\\r\\\\]|\\\\. なので、バックスラッシュを伴わない \" は文字列を閉じる"
+manual:
+  en: "none (the FILE FORMAT section of `unbound.conf.5.in` covers only whitespace, comments and colons, and says nothing about quoting)"
+  ja: "none（`unbound.conf.5.in` の FILE FORMAT 節は空白・コメント・コロンだけを述べ、引用符の扱いを一切書いていない）"
+layers:
+  en: ["config file lexer"]
+  ja: ["設定ファイルの字句解析"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "example.com. TXT "hi""
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "unknown keyword 'hi'"
+  note:
+    en: "The value is cut at `example.com. TXT ` and the remaining hi is read as the next directive"
+    ja: "値が `example.com. TXT ` で切れ、残りの hi が次のディレクティブとして読まれる"

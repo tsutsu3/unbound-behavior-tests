@@ -1,0 +1,31 @@
+id: local-data-owner-trailing-dot-is-same-name
+title:
+  en: "local-data owner names are not distinguished by a trailing dot either, and an identical RR is ignored as a duplicate"
+  ja: "local-data のオーナー名も末尾ドットの有無で区別されず、同じ RR は重複として無視される"
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "sldns/str2wire.c sldns_str2wire_dname_buf_rel() adds the root label to a name without a trailing dot, so the wire names are identical (services/localzone.c rrstr_get_rr_content() passes a NULL origin, so the name is not treated as relative). With the same name and type, services/localzone.c local_zone_enter_rr() reuses the same RRset, and because the rdata is also the same rr_is_duplicate() is true, so it logs verbose(\"ignoring duplicate RR\") and does not add it"
+  ja: "sldns/str2wire.c sldns_str2wire_dname_buf_rel() が末尾ドット無しの名前にルートラベルを補うので同一のワイヤ名になる（origin は services/localzone.c rrstr_get_rr_content() が NULL を渡すため相対名として扱われない）。同一名・同一型なので services/localzone.c local_zone_enter_rr() が同じ RRset を再利用し、rdata も同じなので rr_is_duplicate() が真になって verbose(\"ignoring duplicate RR\") のうえ追加されない"
+manual:
+  en: "none (the local-data: entry does not say whether a trailing dot is required)"
+  ja: "none（local-data: の項に末尾ドットの要否の記述がない）"
+layers:
+  en: ["RR owner name to dname conversion", "RRset duplicate detection"]
+  ja: ["RR オーナー名の dname 変換", "RRset の重複判定"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "aaa.example.com A 192.0.2.7"
+  local-data: "aaa.example.com. A 192.0.2.7"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "aaa.example.com. A"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ["192.0.2.7"]
+  note:
+    en: "If the rdata differs it is not a duplicate, so both appear in the one RRset for the name. Nothing is overwritten"
+    ja: "rdata が違えば重複ではないので、同じ名前の 1 つの RRset に 2 件並ぶ。上書きにはならない"

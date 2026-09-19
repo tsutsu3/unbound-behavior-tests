@@ -1,0 +1,30 @@
+id: conf-lexer-single-quote-keeps-double-quote
+title:
+  en: "With single quotes the inner double quotes stay in the value, so the TXT is one character-string"
+  ja: 単一引用符で囲むと中の二重引用符が値として残り TXT が 1 つの character-string になる
+chapter: "5.2"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "util/configlexer.lex SQANY = [^\\'\\n\\r\\\\]|\\\\. so \" is an ordinary character. sldns/str2wire.c rrinternal_get_quoted() sees the leading \" and switches the delimiter to \""
+  ja: "util/configlexer.lex SQANY = [^\\'\\n\\r\\\\]|\\\\. なので \" は普通の文字。sldns/str2wire.c rrinternal_get_quoted() が先頭の \" を見て区切りを \" に切り替える"
+manual:
+  en: "doc/unbound.conf.5.in, local-data entry: For record types such as TXT, use single quotes, as in: local-data: 'example. TXT \"text\"'"
+  ja: "doc/unbound.conf.5.in local-data の項: For record types such as TXT, use single quotes, as in: local-data: 'example. TXT \"text\"'"
+layers:
+  en: ["config file lexer", "rdata tokenisation of RR text"]
+  ja: ["設定ファイルの字句解析", "RR テキストの rdata トークン分割"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: 'example.com. TXT "hello world"'
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. TXT"
+  rcode: "NOERROR"
+  answer_contains: ['"hello world"']
+  answer_count: 1
+  note:
+    en: "The man page only says to use single quotes, not what happens with double quotes"
+    ja: "man は単一引用符を使えとだけ書き、二重引用符だと何が起きるかは書いていない"

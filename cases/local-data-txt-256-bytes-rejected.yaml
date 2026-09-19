@@ -1,0 +1,27 @@
+id: local-data-txt-256-bytes-rejected
+title:
+  en: "A TXT character-string of 256 bytes is a configuration error"
+  ja: TXT の character-string が 256 バイトになると設定エラーになる
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "sldns/str2wire.c sldns_str2wire_str_buf(). The sl >= 255 check at the top of the loop returns LDNS_WIREPARSE_ERR_INVALID_STR before the 256th byte is written"
+  ja: "sldns/str2wire.c sldns_str2wire_str_buf()。ループ先頭の sl >= 255 判定で 256 バイト目の書き込み前に LDNS_WIREPARSE_ERR_INVALID_STR を返す"
+manual:
+  en: "none (the local-data entry gives no length limit)"
+  ja: "none（local-data の項に長さ上限の記述がない）"
+layers:
+  en: ["RR rdata to wire conversion"]
+  ja: ["RR rdata のワイヤ変換"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: 'example.com. TXT "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"'
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "Conversion error, string expected"
+  note:
+    en: "The error text is a generic sldns message and does not say that the value is too long"
+    ja: "エラー文字列は sldns の汎用メッセージで、長すぎることを示さない"

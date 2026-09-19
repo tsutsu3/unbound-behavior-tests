@@ -1,0 +1,31 @@
+id: forward-addr-name-implies-port-853
+title:
+  en: "Adding #name alone changes the destination port to 853, and TLS is never consulted"
+  ja: '#name を付けるだけで宛先ポートが 853 になり、TLS かどうかは参照されない'
+chapter: "6.4"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "util/net_help.c authextstrtoaddr(). On the path with # and no @ it unconditionally assigns port = UNBOUND_DNS_OVER_TLS_PORT (853). Neither cfg->ssl_upstream nor dp->ssl_upstream, the equivalents of forward-tls-upstream, is looked at here"
+  ja: "util/net_help.c authextstrtoaddr()。@ が無く # がある経路で無条件に port = UNBOUND_DNS_OVER_TLS_PORT (853) を代入する。forward-tls-upstream に相当する cfg->ssl_upstream も dp->ssl_upstream もこの時点では見ていない"
+manual:
+  en: "doc/unbound.conf.5.in, forward-addr entry: If TLS is enabled, then you can append a '#' and a name, then it'll check the tls authentication certificates with that name. / If only '#' is used the default port is the configured tls-port."
+  ja: "doc/unbound.conf.5.in forward-addr の項: If TLS is enabled, then you can append a '#' and a name, then it'll check the tls authentication certificates with that name. / If only '#' is used the default port is the configured tls-port."
+layers:
+  en: ["address parsing", "TLS decision (separate layer, not consulted)"]
+  ja: ["アドレス分解", "TLS 判定（別レイヤ・不参照）"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1#example.com
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:853"
+  query: "example.com. A"
+  note:
+    en: "forward-tls-upstream is left at its default, no. Plain UDP still goes to port 853. The man page's condition If TLS is enabled does not exist in the implementation"
+    ja: "forward-tls-upstream は既定の no。それでも平文 UDP が 853 番へ出る。man の If TLS is enabled という条件は実装には無い"

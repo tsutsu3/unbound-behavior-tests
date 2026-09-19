@@ -1,0 +1,29 @@
+id: local-zone-block-aaaa-ignores-local-data
+title:
+  en: "block_aaaa returns NODATA for AAAA even when local-data exists"
+  ja: "block_aaaa は local-data があっても AAAA に NODATA を返す"
+chapter: "5.3"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "The condition at services/localzone.c local_zones_answer() L1990 includes lzt != local_zone_block_aaaa, so local_data_answer() is not reached. local_zones_zone_answer() L1761 returns NOERROR/NODATA for qtype == AAAA"
+  ja: "services/localzone.c local_zones_answer() L1990 の条件が lzt != local_zone_block_aaaa を含むため local_data_answer() を通らない。local_zones_zone_answer() L1761 が qtype == AAAA に NOERROR/NODATA を返す"
+manual:
+  en: "doc/unbound.conf.5.in L3115, the .B block_aaaa entry"
+  ja: "doc/unbound.conf.5.in L3115 .B block_aaaa の項"
+layers:
+  en: ["answer generation per zone type", "whether local-data is consulted"]
+  ja: ["ゾーン型ごとの応答生成", "local-data 参照の可否判定"]
+status: verified
+config: |
+  local-zone: "example.com." block_aaaa
+  local-data: "example.com. AAAA 2001:db8::1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. AAAA"
+  rcode: "NOERROR"
+  answer_count: 0
+  note:
+    en: "The man page states ignores local data, which matches the implementation. What is counter-intuitive is that an AAAA written in local-data is not returned"
+    ja: "man は ignores local data と明記しており実装と一致する。local-data に AAAA を書いても返らない点が直感に反する"

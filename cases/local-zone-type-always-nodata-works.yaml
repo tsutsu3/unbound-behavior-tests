@@ -1,0 +1,29 @@
+id: local-zone-type-always-nodata-works
+title:
+  en: "always_nodata works but is missing from the local-zone type list"
+  ja: always_nodata は動作するが local-zone の type 一覧に載っていない
+chapter: "5.3"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "util/configparser.y server_local_zone accepts \"always_nodata\", and services/localzone.c local_zone_str2type() converts it to local_zone_always_nodata"
+  ja: "util/configparser.y server_local_zone が \"always_nodata\" を受理し、services/localzone.c local_zone_str2type() が local_zone_always_nodata に変換する"
+manual:
+  en: "doc/unbound.conf.5.in L2910-L2925, the list of types under local-zone: deny, refuse, static, transparent, redirect, nodefault, typetransparent, inform, inform_deny, inform_redirect, always_transparent, block_a, block_aaaa, block_a_wdata, block_aaaa_wdata, always_refuse, always_nxdomain, always_null, noview (always_nodata and always_deny are not in it). There are, however, separate entries for .B always_nodata at L3156 and .B always_deny at L3162"
+  ja: "doc/unbound.conf.5.in L2910-L2925 の local-zone: の type 列挙: deny, refuse, static, transparent, redirect, nodefault, typetransparent, inform, inform_deny, inform_redirect, always_transparent, block_a, block_aaaa, block_a_wdata, block_aaaa_wdata, always_refuse, always_nxdomain, always_null, noview（always_nodata と always_deny を含まない）。ただし L3156 に .B always_nodata、L3162 に .B always_deny の個別説明はある"
+layers:
+  en: ["type validation in the grammar", "answer generation per zone type"]
+  ja: ["文法規則の type 検証", "ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "example.com." always_nodata
+  local-data: "example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. A"
+  rcode: "NOERROR"
+  answer_count: 0
+  note:
+    en: "NODATA even with local-data present. The man page lists 19 types, but 21 can actually be written (not counting ipset)"
+    ja: "local-data があっても NODATA。man の列挙は 19 種だが実際に書けるのは 21 種（ipset を除く）"

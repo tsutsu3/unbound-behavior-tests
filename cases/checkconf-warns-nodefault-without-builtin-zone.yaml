@@ -1,0 +1,26 @@
+id: checkconf-warns-nodefault-without-builtin-zone
+title:
+  en: "nodefault on a name that is not a built-in zone only warns, and checkconf succeeds"
+  ja: 組み込みゾーンでない名前に nodefault を書くと警告だけ出て成功する
+chapter: "5.6"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "smallapp/unbound-checkconf.c nodefaultzonescheck() compares the name against as112_zones / local_zones_default_special / local_zones_default_reverse / localhost., and if it is in none of them it only does fprintf(stderr, ... warning ...) without making it fatal"
+  ja: "smallapp/unbound-checkconf.c nodefaultzonescheck() が as112_zones / local_zones_default_special / local_zones_default_reverse / localhost. と突き合わせ、どれにも無ければ fprintf(stderr, ... warning ...) するだけで fatal にしない"
+manual:
+  en: "none (the man pages do not list what `unbound-checkconf` validates and what it does not)"
+  ja: "none（`unbound-checkconf` が何を検証し何を検証しないかの一覧が man にない）"
+layers:
+  en: ["checkconf extra checks"]
+  ja: ["checkconf の追加検査"]
+status: verified
+config: |
+  local-zone: "example.com." nodefault
+command: unbound-checkconf
+expect:
+  exit: 0
+  stderr_contains: "is configured as 'nodefault' but there is no such default local-zone"
+  note:
+    en: "A typo that turns off nothing still passes"
+    ja: "打ち消し対象が存在しない書き間違いは通る"

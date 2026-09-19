@@ -1,0 +1,31 @@
+id: conf-include-toplevel-closes-section
+title:
+  en: "After include-toplevel: a section must be opened again, or it is a syntax error"
+  ja: "include-toplevel: の直後は節を開き直さないと構文エラーになる"
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "The include-toplevel rule in util/configlexer.lex returns VAR_FORCE_TOPLEVEL after config_start_include_glob(yytext, 1), and returns the same token at the included file's EOF when prev_toplevel is set. util/configparser.y force_toplevel sets cfg_parser->started_toplevel = 0, so the next directive is outside any section. The error text is a dedicated one that util/config_file.c ub_c_error() substitutes when started_toplevel == 0"
+  ja: "util/configlexer.lex の include-toplevel 規則が config_start_include_glob(yytext, 1) のあと VAR_FORCE_TOPLEVEL を返し、インクルード先の EOF でも prev_toplevel なら同じトークンを返す。util/configparser.y force_toplevel が cfg_parser->started_toplevel = 0 にするため、直後のディレクティブは節の外になる。エラー文言は util/config_file.c ub_c_error() が started_toplevel == 0 のときに差し替える専用のもの"
+manual:
+  en: "doc/unbound.conf.5.in INCLUDING FILES: For a more structural include option, the include-toplevel: directive can be used. This closes whatever section clause is currently active (if any) and forces the use of section clauses in the included files and right after this directive."
+  ja: "doc/unbound.conf.5.in INCLUDING FILES: For a more structural include option, the include-toplevel: directive can be used. This closes whatever section clause is currently active (if any) and forces the use of section clauses in the included files and right after this directive."
+layers:
+  en: ["include expansion", "section clause start detection"]
+  ja: ["インクルード展開", "節（section clause）の開始判定"]
+status: verified
+config: |
+  include-toplevel: "extra.conf"
+  local-zone: "example.com." static
+files:
+  extra.conf: |
+    server:
+        local-zone: "other.example.com." static
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "is there no section start after an include-toplevel directive"
+  note:
+    en: "Writing server: again right after it makes the file pass. The error text is dedicated and names the cause, which is rare"
+    ja: "直後に server: を書き直せば通る。エラー文言は専用に用意されており、原因を名指ししてくれる数少ない例"

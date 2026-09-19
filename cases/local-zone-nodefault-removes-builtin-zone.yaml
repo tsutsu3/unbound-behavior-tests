@@ -1,0 +1,32 @@
+id: local-zone-nodefault-removes-builtin-zone
+title:
+  en: "nodefault removes the built-in zone, and queries go upstream"
+  ja: nodefault を書くと組み込みゾーンが消え、問い合わせが上流へ出る
+chapter: "5.6"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configparser.y server_local_zone puts nodefault into cfg->local_zones_nodefault rather than cfg->local_zones. services/localzone.c add_empty_default() skips the built-in contents when lz_nodefault() matches"
+  ja: "util/configparser.y server_local_zone は nodefault を cfg->local_zones ではなく cfg->local_zones_nodefault に入れる。services/localzone.c add_empty_default() が lz_nodefault() で該当すれば組み込み内容を入れない"
+manual:
+  en: "doc/unbound.conf.5.in, nodefault entry: Used to turn off default contents for AS112 zones. The other types also turn off default contents for the zone."
+  ja: "doc/unbound.conf.5.in nodefault の項: Used to turn off default contents for AS112 zones. The other types also turn off default contents for the zone."
+layers:
+  en: ["routing into the nodefault list", "suppression of built-in zones", "forwarding destination selection"]
+  ja: ["nodefault リストへの振り分け", "組み込みゾーンの抑止", "転送先の決定"]
+status: verified
+config: |
+  local-zone: "test." nodefault
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5399
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5399"
+  query: "test. SOA"
+  note:
+    en: "Without nodefault the built-in static zone test. would answer and nothing would reach the upstream"
+    ja: "nodefault が無ければ組み込みの test. static ゾーンが答えてしまい、上流には何も届かない"

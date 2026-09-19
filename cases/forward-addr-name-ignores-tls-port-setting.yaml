@@ -1,0 +1,34 @@
+id: forward-addr-name-ignores-tls-port-setting
+title:
+  en: "With #name the default port is the compile-time constant 853, not the tls-port: setting"
+  ja: '#name のときの既定ポートは tls-port: の設定値ではなくコンパイル時定数 853 である'
+chapter: "6.4"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "util/net_help.c authextstrtoaddr() assigns UNBOUND_DNS_OVER_TLS_PORT (853 in config.h.in) directly. cfg->ssl_port (tls-port:) is read only on the listening side in services/listen_dnsport.c and in services/authzone.c, and plays no part in parsing forward-addr / stub-addr"
+  ja: "util/net_help.c authextstrtoaddr() が UNBOUND_DNS_OVER_TLS_PORT (config.h.in で 853) を直接代入する。cfg->ssl_port（tls-port:）は services/listen_dnsport.c の待ち受け側と services/authzone.c でしか読まれず、forward-addr / stub-addr の解釈には一切関与しない"
+manual:
+  en: "doc/unbound.conf.5.in, forward-addr entry: If only '#' is used the default port is the configured tls-port."
+  ja: "doc/unbound.conf.5.in forward-addr の項: If only '#' is used the default port is the configured tls-port."
+layers:
+  en: ["address parsing", "scope of the tls-port setting"]
+  ja: ["アドレス分解", "tls-port 設定の適用範囲"]
+status: verified
+config: |
+  server:
+      tls-port: 8853
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1#example.com
+    forward-tls-upstream: yes
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: tcp
+    addr: "127.0.0.1:853"
+  query: "example.com. A"
+  note:
+    en: "According to the man page it should go to 8853, but it goes to 853. The man page disagrees with the implementation"
+    ja: "man の記述どおりなら 8853 へ出るはずだが 853 へ出る。man が実装と食い違う"

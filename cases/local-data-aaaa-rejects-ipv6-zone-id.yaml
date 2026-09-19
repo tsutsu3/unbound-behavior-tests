@@ -1,0 +1,27 @@
+id: local-data-aaaa-rejects-ipv6-zone-id
+title:
+  en: "An IPv6 zone ID (%eth0) is rejected in AAAA RDATA"
+  ja: AAAA の RDATA では IPv6 zone ID（%eth0）が拒否される
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "sldns/str2wire.c sldns_str2wire_aaaa_buf() just calls inet_pton(AF_INET6, str, ...) and does not handle %. util/net_help.c ipstrtoaddr(), by contrast, splits off the % and turns it into sin6_scope_id with if_nametoindex()"
+  ja: "sldns/str2wire.c sldns_str2wire_aaaa_buf() は inet_pton(AF_INET6, str, ...) をそのまま呼ぶだけで % を扱わない。util/net_help.c ipstrtoaddr() は逆に % を切り出して if_nametoindex() で sin6_scope_id にする"
+manual:
+  en: "none (neither the local-data entry nor anything about AAAA mentions zone IDs; searched for '%', 'scope' and 'zone id')"
+  ja: "none（local-data の項にも AAAA の項にも zone ID の記述がない。'%' 'scope' 'zone id' で検索）"
+layers:
+  en: ["RR rdata to wire conversion", "socket address construction (for contrast)"]
+  ja: ["RR rdata のワイヤ変換", "ソケットアドレス生成（対比先）"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "example.com. AAAA fe80::1%eth0"
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "Conversion error, ip6 addr expected"
+  note:
+    en: "The same notation is accepted in forward-addr. Whether it is accepted depends on where it is written"
+    ja: "同じ表記が forward-addr では受理される。可否が場所で違う"

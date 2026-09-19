@@ -1,0 +1,30 @@
+id: local-data-semicolon-starts-rr-comment
+title:
+  en: "Inside a local-data value, ; starts a comment, not #"
+  ja: "local-data の値の中では # ではなく ; がコメント開始になる"
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "sldns/parse.c sldns_bget_token_par(). When c == ';', it is not quoted and the previous character is not \\\\, com=1 is set and the rest of the line is replaced with whitespace. The config file's # comment is {SPACE}*{COMMENT}.* in util/configlexer.lex and does not apply inside quotes"
+  ja: "sldns/parse.c sldns_bget_token_par()。c == ';' かつ quoted でなく直前が \\\\ でなければ com=1 になり、以降は行末まで空白に置き換えられる。設定ファイル側の # コメントは util/configlexer.lex の {SPACE}*{COMMENT}.* で、引用符の内側には適用されない"
+manual:
+  en: "none (FILE FORMAT in the man page describes only # as a comment, and does not mention that a local-data value, being RR text, has a separate comment rule)"
+  ja: "none（man の FILE FORMAT は # だけをコメントとして説明し、local-data の値が RR テキストとして別のコメント規則を持つことに触れていない）"
+layers:
+  en: ["config file comment rule", "rdata tokenisation of RR text"]
+  ja: ["設定ファイルのコメント規則", "RR テキストの rdata トークン分割"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "example.com. TXT abc ; def"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. TXT"
+  rcode: "NOERROR"
+  answer_contains: ['"abc"']
+  answer_count: 1
+  note:
+    en: "Writing # at the same position gives three character-strings: abc / # / def. Only ; works as a comment"
+    ja: "同じ位置に # を書くと abc / # / def の 3 つの character-string になる。コメントとして効くのは ; だけ"

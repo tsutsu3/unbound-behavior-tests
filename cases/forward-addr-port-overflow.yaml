@@ -1,0 +1,31 @@
+id: forward-addr-port-overflow
+title:
+  en: "The forward-addr @port is not range-checked and is truncated to uint16"
+  ja: forward-addr の @ポートは範囲検証されず uint16 に切り詰められる
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/net_help.c authextstrtoaddr() does port = atoi(s+1) without a range check, and util/net_help.c ipstrtoaddr() truncates it with p = (uint16_t)port"
+  ja: "util/net_help.c authextstrtoaddr() が port = atoi(s+1) を範囲検証せず、util/net_help.c ipstrtoaddr() が p = (uint16_t)port で切り詰める"
+manual:
+  en: "none (the forward-addr entry in `unbound.conf.5.in` only says To use a non-default port for DNS communication append '@' with the port number. and gives no valid range)"
+  ja: "none（`unbound.conf.5.in` forward-addr の項は To use a non-default port for DNS communication append '@' with the port number. とだけ書き、値域の記述がない）"
+layers:
+  en: ["address parsing"]
+  ja: ["アドレス分解"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@70000
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:4464"
+  query: "example.com. A"
+  note:
+    en: "70000 is truncated to uint16 and becomes 4464"
+    ja: "70000 は uint16 に切り詰められ 4464 になる"

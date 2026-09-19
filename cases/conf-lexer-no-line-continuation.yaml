@@ -1,0 +1,28 @@
+id: conf-lexer-no-line-continuation
+title:
+  en: "A quoted value cannot span lines (there is no line continuation syntax)"
+  ja: 引用符で囲んだ値は行をまたげない（行継続の構文がない）
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "The util/configlexer.lex `<quotedstring>{NEWLINE}` rule emits yyerror(\"newline inside quoted string, no end \\\"\") and returns to INITIAL. DQANY does not include NEWLINE either"
+  ja: "util/configlexer.lex `<quotedstring>{NEWLINE}` 規則が yyerror(\"newline inside quoted string, no end \\\"\") を出して INITIAL へ戻る。DQANY も NEWLINE を含まない"
+manual:
+  en: "none (the FILE FORMAT section mentions neither line continuation nor that a quoted value must fit on one line)"
+  ja: "none（FILE FORMAT 節に行継続の記述も、引用値が行内に収まる必要があるという記述もない）"
+layers:
+  en: ["config file lexer"]
+  ja: ["設定ファイルの字句解析"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "example.com. TXT
+      hello"
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "newline inside quoted string"
+  note:
+    en: "A long local-data cannot be wrapped for readability"
+    ja: "長い local-data を見やすく折り返すことはできない"

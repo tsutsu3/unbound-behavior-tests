@@ -1,0 +1,31 @@
+id: local-zone-implicit-transparent-at-shared-suffix
+title:
+  en: "local-data without a local-zone creates one transparent zone at the shortest common parent domain"
+  ja: "local-zone を書かない local-data は「共通する最短の上位ドメイン」1 つに transparent ゾーンを作る"
+chapter: "5.3"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c lz_setup_implicit(). It walks the names of local-data not covered by any zone, finds the minimum number of matching labels with dname_lab_cmp(), creates exactly one local_zone_transparent zone there, and logs it with log_nametypeclass(VERB_ALGO, \"implicit transparent local-zone\", ...)"
+  ja: "services/localzone.c lz_setup_implicit()。どのゾーンにも覆われない local-data の名前を走査し dname_lab_cmp() で一致ラベル数の最小値を求め、そこに 1 つだけ local_zone_transparent のゾーンを作り log_nametypeclass(VERB_ALGO, \"implicit transparent local-zone\", ...) で記録する"
+manual:
+  en: "doc/unbound.conf.5.in, local-data entry: If local-data is configured that is not a subdomain of a local-zone, a transparent local-zone is configured."
+  ja: "doc/unbound.conf.5.in local-data の項: If local-data is configured that is not a subdomain of a local-zone, a transparent local-zone is configured."
+layers:
+  en: ["scan of uncovered local-data", "common suffix computation and zone creation"]
+  ja: ["未被覆 local-data の走査", "共通接尾辞の算出とゾーン生成"]
+status: verified
+config: |
+  verbosity: 4
+  local-data: "a.example.com. A 192.0.2.1"
+  local-data: "b.example.com. A 192.0.2.2"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "a.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.0.2.1"]
+  stderr_contains: "implicit transparent local-zone example.com. TYPE0 IN"
+  note:
+    en: "The man page only says that a transparent zone is created. It does not say that there is one in total rather than one per name, or that its position is pulled up by the other local-data. unbound-checkconf does not print this log, because it does not set the global verbosity (smallapp/unbound-checkconf.c has no assignment equivalent to daemon/unbound.c L305)"
+    ja: "man は「transparent なゾーンが作られる」とだけ書く。名前ごとに 1 つではなく全体で 1 つ、位置が他の local-data に引きずられることは書いていない。なお unbound-checkconf はグローバル verbosity を設定しないのでこのログを出さない（daemon/unbound.c L305 に相当する代入が smallapp/unbound-checkconf.c にない）"

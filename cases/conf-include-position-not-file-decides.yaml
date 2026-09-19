@@ -1,0 +1,32 @@
+id: conf-include-position-not-file-decides
+title:
+  en: "With include: at the end, the included file beats the main configuration"
+  ja: "include: を後ろに置くと、インクルードした側が本体の設定に勝つ"
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configlexer.lex expands at the textual position, so no distinction between the main file and the included file survives. Head insertion in util/config_file.c cfg_str2list_insert() combined with services/localzone.c lz_enter_zone_dname() returning the existing zone on a duplicate means that only the position in the file decides the winner"
+  ja: "util/configlexer.lex の展開はテキスト位置そのものなので、本体か include 先かという区別は残らない。util/config_file.c cfg_str2list_insert() の先頭挿入と services/localzone.c lz_enter_zone_dname() の重複時「既存を返す」の組み合わせで、ファイル内での位置だけが勝敗を決める"
+manual:
+  en: "doc/unbound.conf.5.in INCLUDING FILES: It can appear anywhere, it accepts a single file name as argument. Processing continues as if the text from the included file was copied into the config file at that point."
+  ja: "doc/unbound.conf.5.in INCLUDING FILES: It can appear anywhere, it accepts a single file name as argument. Processing continues as if the text from the included file was copied into the config file at that point."
+layers:
+  en: ["include expansion", "config list build order (head insertion)", "duplicate handling at zone registration"]
+  ja: ["インクルード展開", "設定リストの構築順（先頭挿入）", "ゾーン登録時の重複処理"]
+status: verified
+config: |
+  local-zone: "example.com." refuse
+  include: "common.conf"
+files:
+  common.conf: |
+    server:
+        local-zone: "example.com." static
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. A"
+  rcode: "NXDOMAIN"
+  note:
+    en: "The refuse in the main file loses and the static from the included file remains. The intuition that your own unbound.conf is stronger than shared settings does not hold. Only the position of the include: line decides"
+    ja: "本体に書いた refuse が負けて、include 先の static が残る。「自分の unbound.conf は共通設定より強い」という直感は成り立たない。決めるのは include: 行の位置だけ"

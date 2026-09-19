@@ -1,0 +1,31 @@
+id: forward-addr-port-negative
+title:
+  en: "forward-addr @-1 is not an error and becomes 65535"
+  ja: forward-addr の @-1 はエラーにならず 65535 になる
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/net_help.c authextstrtoaddr(). atoi(\"-1\") is -1, not 0, so it slips past the port == 0 check, and the (uint16_t)(-1) in ipstrtoaddr() makes it 65535"
+  ja: "util/net_help.c authextstrtoaddr()。atoi(\"-1\") は -1 で 0 ではないため port == 0 の検査を通り抜け、ipstrtoaddr() の (uint16_t)(-1) で 65535 になる"
+manual:
+  en: "none (the forward-addr entry says nothing about the valid range)"
+  ja: "none（forward-addr の項に値域の記述がない）"
+layers:
+  en: ["address parsing"]
+  ja: ["アドレス分解"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@-1
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:65535"
+  query: "example.com. A"
+  note:
+    en: "The only check compares against the string \"0\" when port == 0, and a negative value is not caught by it"
+    ja: "port == 0 のときだけ文字列 \"0\" と照合する検査があり、負値はその検査に掛からない"

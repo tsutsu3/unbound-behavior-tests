@@ -1,0 +1,27 @@
+id: conf-lexer-missing-argument-eats-next-directive
+title:
+  en: "Forgetting the second argument of local-zone makes it consume the next line's directive name"
+  ja: local-zone の第 2 引数を書き忘れると次の行のディレクティブ名が引数として食われる
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configlexer.lex. YDVAR(2, VAR_LOCAL_ZONE) enters the val state with num_args=2, and newlines are skipped by <INITIAL,val>{NEWLINE}. UNQUOTEDLETTER includes the colon, so `local-data:` on the next line matches <val>{UNQUOTEDLETTER}* and becomes the second STRING_ARG"
+  ja: "util/configlexer.lex。YDVAR(2, VAR_LOCAL_ZONE) が num_args=2 で val 状態に入り、改行は <INITIAL,val>{NEWLINE} で読み飛ばされる。UNQUOTEDLETTER はコロンを含むため、次行の `local-data:` が <val>{UNQUOTEDLETTER}* に一致して 2 個目の STRING_ARG になる"
+manual:
+  en: "none (the FILE FORMAT section does not say what happens when arguments are missing)"
+  ja: "none（FILE FORMAT 節に引数不足時の扱いの記述がない）"
+layers:
+  en: ["config file lexer (state machine)", "argument count in the grammar rule"]
+  ja: ["設定ファイルの字句解析（状態機械）", "文法規則の引数個数"]
+status: verified
+config: |
+  local-zone: "example.com."
+  local-data: "example.com. A 192.0.2.1"
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "local-zone type: expected static"
+  note:
+    en: "The error says there is no type called local-data:, so it is hard to see that the cause is a missing argument on the line above"
+    ja: "エラーは「local-data: という type は無い」と出るため、原因が 1 行上の引数不足だと読み取りにくい"

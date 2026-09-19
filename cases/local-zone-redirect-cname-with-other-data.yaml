@@ -1,0 +1,28 @@
+id: local-zone-redirect-cname-with-other-data
+title:
+  en: "In a redirect zone, a CNAME cannot coexist with local-data of other types"
+  ja: redirect ゾーンでは CNAME と他の型の local-data を同居させられない
+chapter: "5.4"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zone_enter_rr(). In redirect / inform_redirect, when node->rrsets already exists and either the new record or the existing one is a CNAME, it does log_err and returns 0"
+  ja: "services/localzone.c local_zone_enter_rr()。redirect / inform_redirect で node->rrsets が既にある場合、追加が CNAME か既存が CNAME なら log_err して 0 を返す"
+manual:
+  en: "doc/unbound.conf.5.in, `redirect` entry: The CNAME record has to be with the zone name of the local-zone, and there can be one CNAME, not more."
+  ja: "doc/unbound.conf.5.in `redirect` の項: The CNAME record has to be with the zone name of the local-zone, and there can be one CNAME, not more."
+layers:
+  en: ["zone type check", "adding an RRset to a local_data node"]
+  ja: ["ゾーン型の判定", "local_data ノードの RRset 追加"]
+status: verified
+config: |
+  local-zone: "example.com." redirect
+  local-data: "example.com. A 192.0.2.1"
+  local-data: "example.com. CNAME www.example.org."
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "in redirect zone must not coexist with"
+  note:
+    en: "The man page reads as if it only forbids more than one CNAME, but the implementation also forbids a CNAME alongside other types"
+    ja: "man は CNAME の重複だけを禁じているように読めるが、実装は CNAME と他型の同居も禁じる"

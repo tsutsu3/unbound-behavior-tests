@@ -1,0 +1,29 @@
+id: local-data-txt-limit-is-wire-length
+title:
+  en: "The TXT limit of 255 counts the wire length after escape resolution, not the input length"
+  ja: TXT の 255 の上限はエスケープ解決前の入力長ではなく解決後のワイヤ長で数える
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "sldns/str2wire.c sldns_str2wire_str_buf() counts sl after sldns_parse_char() has resolved each character. sldns/parseutil.c sldns_parse_escape() folds \\DDD into one byte"
+  ja: "sldns/str2wire.c sldns_str2wire_str_buf() は sldns_parse_char() で 1 文字ずつ解決した後の sl を数える。sldns/parseutil.c sldns_parse_escape() が \\DDD を 1 バイトに畳む"
+manual:
+  en: "none (the local-data entry gives neither the length limit nor how escapes are counted)"
+  ja: "none（local-data の項に長さ上限もエスケープの数え方も記述がない）"
+layers:
+  en: ["escape resolution", "RR rdata to wire conversion"]
+  ja: ["エスケープ解決", "RR rdata のワイヤ変換"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: 'example.com. TXT "\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097\097"'
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. TXT"
+  rcode: "NOERROR"
+  answer_count: 1
+  note:
+    en: "The input is 1020 characters but the wire length is 255 bytes, so it passes. Counting by input length would reject it"
+    ja: "入力は 1020 文字だがワイヤ長は 255 バイトなので通る。入力長で数えていれば拒否される"

@@ -1,0 +1,30 @@
+id: local-zone-block-aaaa-wdata-uses-local-data
+title:
+  en: "block_aaaa_wdata returns local-data when there is any"
+  ja: "block_aaaa_wdata は local-data があればそれを返す"
+chapter: "5.3"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "block_aaaa_wdata is not in the exclusion condition at services/localzone.c local_zones_answer() L1990, so local_data_answer() takes effect first. Without local-data, local_zones_zone_answer() L1761 returns NODATA"
+  ja: "services/localzone.c local_zones_answer() L1990 の除外条件に block_aaaa_wdata が入っていないため local_data_answer() が先に効く。無ければ local_zones_zone_answer() L1761 で NODATA"
+manual:
+  en: "doc/unbound.conf.5.in L3133, the .B block_aaaa_wdata entry"
+  ja: "doc/unbound.conf.5.in L3133 .B block_aaaa_wdata の項"
+layers:
+  en: ["answer generation per zone type", "whether local-data is consulted"]
+  ja: ["ゾーン型ごとの応答生成", "local-data 参照の可否判定"]
+status: verified
+config: |
+  local-zone: "example.com." block_aaaa_wdata
+  local-data: "example.com. AAAA 2001:db8::1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. AAAA"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ["2001:db8::1"]
+  note:
+    en: "The only difference from block_aaaa is whether local-data is consulted. The man page's For AAAA queries it returns NODATA applies when there is no local-data; when there is, local-data is returned for AAAA too"
+    ja: "block_aaaa との違いは local-data を見るかどうかだけ。man の For AAAA queries it returns NODATA は local-data が無い場合の話で、ある場合は AAAA も local-data が返る"

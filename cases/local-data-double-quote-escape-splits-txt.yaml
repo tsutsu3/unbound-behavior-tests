@@ -1,0 +1,30 @@
+id: local-data-double-quote-escape-splits-txt
+title:
+  en: "An escaped \\\" inside double quotes does not become a TXT quote, and breaks the value and the word boundaries"
+  ja: 二重引用符の中でエスケープした \" は TXT の引用符にならず値と語の区切りが壊れる
+chapter: "5.2"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "util/configlexer.lex leaves \\\\\" as two characters. sldns/str2wire.c rrinternal_get_quoted() sees a leading \\\\, so it does not treat the text as quoted, and the delimiters stay \"\\n\\t \". sldns/parseutil.c sldns_parse_char() later resolves \\\\\" to \", so the quote ends up in the value"
+  ja: "util/configlexer.lex は \\\\\" を 2 文字のまま残す。sldns/str2wire.c rrinternal_get_quoted() は先頭が \\\\ なので引用と見なさず、区切りは \"\\n\\t \" のまま。sldns/parseutil.c sldns_parse_char() が後で \\\\\" を \" に解くので引用符が値に入る"
+manual:
+  en: "doc/unbound.conf.5.in, local-data entry: For record types such as TXT, use single quotes, as in: local-data: 'example. TXT \"text\"'"
+  ja: "doc/unbound.conf.5.in local-data の項: For record types such as TXT, use single quotes, as in: local-data: 'example. TXT \"text\"'"
+layers:
+  en: ["config file lexer", "rdata tokenisation of RR text", "escape resolution"]
+  ja: ["設定ファイルの字句解析", "RR テキストの rdata トークン分割", "エスケープ解決"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "example.com. TXT \"hello world\""
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. TXT"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ['"\"hello" "world\""']
+  note:
+    en: "It is not an error. Different data, two character-strings with quotes in them, is registered silently"
+    ja: "エラーにならず、引用符付きの 2 つの character-string という別のデータが黙って登録される"

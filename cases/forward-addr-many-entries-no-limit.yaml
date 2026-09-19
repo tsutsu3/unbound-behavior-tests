@@ -1,0 +1,62 @@
+id: forward-addr-many-entries-no-limit
+title:
+  en: "There is no limit on the number of forward-addr entries"
+  ja: forward-addr の件数に上限はない
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_fwd.c read_fwds_addr() just walks cfg->forwards->addrs without counting. iterator/iter_delegpt.c delegpt_add_addr_mlc() has no limit on the count either"
+  ja: "iterator/iter_fwd.c read_fwds_addr() は cfg->forwards->addrs を単に走査するだけで件数を数えない。iterator/iter_delegpt.c delegpt_add_addr_mlc() にも件数の上限がない"
+manual:
+  en: "none (the forward-addr entry says nothing about the number of entries)"
+  ja: "none（forward-addr の項に件数の記述がない）"
+layers:
+  en: ["forwarder list construction"]
+  ja: ["転送先リストの構築"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5401
+    forward-addr: 127.0.0.2@5401
+    forward-addr: 127.0.0.3@5401
+    forward-addr: 127.0.0.4@5401
+    forward-addr: 127.0.0.5@5401
+    forward-addr: 127.0.0.6@5401
+    forward-addr: 127.0.0.7@5401
+    forward-addr: 127.0.0.8@5401
+    forward-addr: 127.0.0.9@5401
+    forward-addr: 127.0.0.10@5401
+    forward-addr: 127.0.0.11@5401
+    forward-addr: 127.0.0.12@5401
+    forward-addr: 127.0.0.13@5401
+    forward-addr: 127.0.0.14@5401
+    forward-addr: 127.0.0.15@5401
+    forward-addr: 127.0.0.16@5401
+    forward-addr: 127.0.0.17@5401
+    forward-addr: 127.0.0.18@5401
+    forward-addr: 127.0.0.19@5401
+    forward-addr: 127.0.0.20@5401
+    forward-addr: 127.0.0.21@5401
+    forward-addr: 127.0.0.22@5401
+    forward-addr: 127.0.0.23@5401
+    forward-addr: 127.0.0.24@5401
+    forward-addr: 127.0.0.25@5401
+    forward-addr: 127.0.0.26@5401
+    forward-addr: 127.0.0.27@5401
+    forward-addr: 127.0.0.28@5401
+    forward-addr: 127.0.0.29@5401
+    forward-addr: 127.0.0.30@5401
+    forward-addr: 127.0.0.31@5401
+    forward-addr: 127.0.0.32@5401
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "0.0.0.0:5401"
+  query: "example.com. A"
+  note:
+    en: "32 entries are not rejected. Listening on 0.0.0.0 catches the query whichever address in 127.0.0.0/8 it goes to"
+    ja: "32 件でも拒否されない。0.0.0.0 で待ち受けて 127.0.0.0/8 のどれに出ても捕まえる"
