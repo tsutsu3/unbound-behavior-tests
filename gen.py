@@ -11,8 +11,10 @@ Both come from the same case files, so they cannot drift apart.
 Two rules the output obeys deliberately:
 
 * No generation timestamp.  A timestamp changes on every run and buries the
-  real diff.  The header records the Unbound version and this repository's
-  commit instead.
+  real diff.  The header records the Unbound version and the last commit
+  that changed cases/ instead.  HEAD would not do: the commit that adds the
+  regenerated tables is itself a new HEAD, so the stamp would never match
+  and CI could not check that out/ is up to date.
 * No free/paid distinction.  Every case appears in one table.  Where an item
   is published is the book repository's decision and is not encoded here.
 """
@@ -94,9 +96,10 @@ MESSAGES = {
 
 
 def cases_commit() -> str:
+    """The last commit that touched cases/, or "unknown" outside a checkout."""
     try:
-        return subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
+        commit = subprocess.run(
+            ["git", "log", "-1", "--format=%h", "--", "cases"],
             cwd=ROOT,
             capture_output=True,
             text=True,
@@ -104,6 +107,7 @@ def cases_commit() -> str:
         ).stdout.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         return "unknown"
+    return commit or "unknown"
 
 
 def header() -> str:

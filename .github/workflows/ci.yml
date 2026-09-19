@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cases:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # gen.py stamps the last commit that touched cases/, which needs the
+          # history; a depth-1 clone would stamp HEAD instead.
+          fetch-depth: 0
+
+      - name: Build the image (Unbound 1.26.0 from the release tarball)
+        run: docker compose build
+
+      # gen and lint write to the checkout, so they run as the runner's user.
+      - name: Lint
+        run: |
+          docker compose run --rm -T --user "$(id -u):$(id -g)" lint check .
+          docker compose run --rm -T --user "$(id -u):$(id -g)" lint format --check .
+
+      - name: Check that out/ is up to date
+        run: |
+          docker compose run --rm -T --user "$(id -u):$(id -g)" gen
+          # The header's "cases:" line names the last commit that touched
+          # cases/. It changes when a case commit and its regenerated tables
+          # land in the same commit, which is fine; only the content counts.
+          git diff --exit-code -I '^     cases: [0-9a-f]+ -->$' -- out/
+          untracked="$(git ls-files --others --exclude-standard -- out/)"
+          if [ -n "$untracked" ]; then
+            echo "gen.py wrote files that are not committed:" >&2
+            echo "$untracked" >&2
+            exit 1
+          fi
+
+      - name: Run the cases
+        run: docker compose run --rm -T tests -v -p no:cacheprovider
