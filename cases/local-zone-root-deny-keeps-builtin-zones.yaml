@@ -1,0 +1,28 @@
+id: local-zone-root-deny-keeps-builtin-zones
+title:
+  en: "A deny zone at the root does not reach names under a more specific zone; the built-in zones keep answering"
+  ja: ルートに deny を置いても、より具体的なゾーンの配下には効かず組み込みゾーンは応答し続ける
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zones_tags_lookup() finds the closest enclosing zone with rbtree_find_less_equal() and walks up the parents, so a query is answered by the most specific zone that covers it. local_zone_enter_defaults() adds the built-in zones unless lz_exists() finds a zone with exactly the same name, and a root zone is never the same name, so test. stays in the tree below ."
+  ja: "services/localzone.c local_zones_tags_lookup() が rbtree_find_less_equal() と親ゾーンへの遡りで、問い合わせ名を覆う最も近いゾーンを選ぶ。local_zone_enter_defaults() は lz_exists() が同名ゾーンを見つけない限り組み込みゾーンを入れ、ルートのゾーンは同名にならないので test. は . の下に残る"
+manual:
+  en: "none (the local-zone: entry does not say which zone answers when zones are nested; the closest-match rule is written only for other directives, for example auth-zone: The authority zone with the name closest to the name looked up is used.)"
+  ja: "none（local-zone: の項に、ゾーンが入れ子のときどれが答えるかの記述がない。最も近いものを使うという規則は auth-zone など別の項にだけある: The authority zone with the name closest to the name looked up is used.）"
+layers:
+  en: ["closest enclosing zone lookup", "built-in zone registration"]
+  ja: ["最も近いゾーンの検索", "組み込みゾーンの登録"]
+status: verified
+config: |
+  local-zone: "." deny
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "test. SOA"
+  rcode: "NOERROR"
+  answer_contains: ["nobody.invalid."]
+  note:
+    en: "Denying the root does not block everything. localhost., the reverse zones, home.arpa., onion., test., invalid. and the AS112 zones still answer, and so does any local-zone you wrote. The runner's own readiness probe, ready.invalid., is answered for the same reason"
+    ja: "ルートの deny は全面遮断にならない。localhost.、逆引き、home.arpa.、onion.、test.、invalid.、AS112 の各ゾーンと、自分で書いた local-zone は答え続ける。ランナーの起動確認の問い合わせ ready.invalid. に応答が返るのも同じ理由"

@@ -1,0 +1,27 @@
+id: forward-addr-port-zero-accepted
+title:
+  en: "forward-addr @0 is accepted as port 0"
+  ja: forward-addr の @0 はポート 0 として受理される
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: 'util/net_help.c authextstrtoaddr(). port = atoi(s+1) is 0, and the only check for 0 is strcmp(s+1,"0")!=0, which "0" passes, so ipstrtoaddr() is called with port 0'
+  ja: 'util/net_help.c authextstrtoaddr()。port = atoi(s+1) が 0 になり、0 のときの検査は strcmp(s+1,"0")!=0 だけなので、"0" はそれを通って ipstrtoaddr() がポート 0 で呼ばれる'
+manual:
+  en: "none (the forward-addr entry says nothing about the valid range)"
+  ja: "none（forward-addr の項に値域の記述がない）"
+layers:
+  en: ["address parsing"]
+  ja: ["アドレス分解"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@0
+command: unbound-checkconf
+expect:
+  exit: 0
+  note:
+    en: "The check that rejects @dns deliberately lets the literal 0 through. What the daemon does when it sends to port 0 is not observed here"
+    ja: "@dns を拒否する検査が、文字列 0 だけは意図的に通す。デーモンがポート 0 へ送ろうとしたときの挙動はこのケースでは見ていない"

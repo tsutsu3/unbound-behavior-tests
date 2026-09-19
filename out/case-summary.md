@@ -9,18 +9,18 @@
 
 | Category | Cases |
 | --- | --- |
-| A | 34 |
-| B | 8 |
-| C | 6 |
+| A | 38 |
+| B | 9 |
+| C | 7 |
 | D | 0 |
 | undecided | 1 |
-| Total | 49 |
+| Total | 55 |
 
 ## By status
 
 | Status | Cases |
 | --- | --- |
-| verified | 48 |
+| verified | 54 |
 | needs-test | 0 |
 | inconclusive | 1 |
 
@@ -47,8 +47,11 @@
 | 5.3 | local-zone names ignore the trailing dot and letter case, so different spellings are duplicates of one zone | config list build order (head insertion) + zone name wire conversion and normalisation + duplicate handling at zone registration | `local-zone-name-trailing-dot-and-case-are-same-zone` |
 | 5.3 | local-zone-override accepts truncate, which local-zone: rejects | type validation in the grammar + type conversion at override registration | `local-zone-override-accepts-truncate` |
 | 5.3 | local-zone-override is a fatal error unless a local-zone with the same name already exists | exact-match zone tree lookup + insertion into the override tree | `local-zone-override-requires-exact-zone` |
+| 5.3 | A deny zone at the root does not reach names under a more specific zone; the built-in zones keep answering | closest enclosing zone lookup + built-in zone registration | `local-zone-root-deny-keeps-builtin-zones` |
 | 5.3 | always_nodata works but is missing from the local-zone type list | type validation in the grammar + answer generation per zone type | `local-zone-type-always-nodata-works` |
 | 5.3 | ipset passes the grammar but fails at zone registration in builds without ipset support | type validation in the grammar + type conversion at zone registration | `local-zone-type-ipset-accepted-then-fails` |
+| 5.4 | The CNAME target of a redirect zone is resolved upstream even when a local-zone covers it | local alias for the CNAME + resolution of the alias target | `local-zone-redirect-cname-target-skips-local-zones` |
+| 5.4 | A wildcard CNAME target in a redirect zone is expanded only for non-CNAME queries; a CNAME query gets the literal * | query type check before alias creation + wildcard target expansion | `local-zone-redirect-cname-wildcard-not-expanded-for-cname-query` |
 | 5.4 | In a redirect zone, a CNAME cannot coexist with local-data of other types | zone type check + adding an RRset to a local_data node | `local-zone-redirect-cname-with-other-data` |
 | 5.4 | In a redirect zone, local-data that does not exactly match the apex is a fatal error | zone apex dname comparison + local-data zone registration | `local-zone-redirect-non-apex-data` |
 | 5.5 | An IPv6 zone ID (%eth0) is rejected in AAAA RDATA | RR rdata to wire conversion + socket address construction (for contrast) | `local-data-aaaa-rejects-ipv6-zone-id` |
@@ -73,7 +76,10 @@
 | A quoted value cannot span lines (there is no line continuation syntax) | config file lexer | `conf-lexer-no-line-continuation` |
 | There is no limit on the number of forward-addr entries | forwarder list construction | `forward-addr-many-entries-no-limit` |
 | forward-addr @-1 is not an error and becomes 65535 | address parsing | `forward-addr-port-negative` |
+| A forward-addr @port that does not start with a digit is rejected | address parsing | `forward-addr-port-non-numeric-rejected` |
 | The forward-addr @port is not range-checked and is truncated to uint16 | address parsing | `forward-addr-port-overflow` |
+| Trailing characters after the forward-addr @port number are silently ignored | address parsing | `forward-addr-port-trailing-garbage-ignored` |
+| forward-addr @0 is accepted as port 0 | address parsing | `forward-addr-port-zero-accepted` |
 | Omitting the local-data TTL gives 3600 | local-data RR string parsing | `local-data-default-ttl-3600` |
 | local-data-ptr is rewritten into a PTR local-data string at config parse time | string rewrite at config parse time | `local-data-ptr-is-rewritten-to-local-data` |
 | A TXT character-string of up to 255 wire bytes is accepted | RR rdata to wire conversion | `local-data-txt-255-bytes-ok` |

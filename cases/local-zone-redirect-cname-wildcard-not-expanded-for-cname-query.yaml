@@ -1,0 +1,30 @@
+id: local-zone-redirect-cname-wildcard-not-expanded-for-cname-query
+title:
+  en: "A wildcard CNAME target in a redirect zone is expanded only for non-CNAME queries; a CNAME query gets the literal *"
+  ja: redirect ゾーンの CNAME ターゲットのワイルドカードは CNAME 以外の問い合わせでだけ展開され、CNAME で問うと * のまま返る
+chapter: "5.4"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_data_answer(). The branch that builds the alias and expands a wildcard target with dname_is_wild() runs only when qinfo->qtype != LDNS_RR_TYPE_CNAME. A CNAME query falls through to the generic redirect branch, which only renames the owner to the query name and encodes the stored rdata unchanged"
+  ja: "services/localzone.c local_data_answer()。alias を作り dname_is_wild() でターゲットを展開する分岐は qinfo->qtype != LDNS_RR_TYPE_CNAME のときだけ通る。CNAME の問い合わせは通常の redirect 分岐に落ち、オーナー名を問い合わせ名に差し替えるだけで、格納した rdata をそのまま返す"
+manual:
+  en: "doc/unbound.conf.5.in, redirect entry: As different from CNAME records that are used elsewhere, in the redirect type local-zone, it is supported that in the target of the record a wildcard label gets expanded to the query name, with for example: example.com. CNAME *.foo.net. gets expanded to www.example.com. CNAME www.example.com.foo.net.."
+  ja: "doc/unbound.conf.5.in redirect の項: As different from CNAME records that are used elsewhere, in the redirect type local-zone, it is supported that in the target of the record a wildcard label gets expanded to the query name, with for example: example.com. CNAME *.foo.net. gets expanded to www.example.com. CNAME www.example.com.foo.net.."
+layers:
+  en: ["query type check before alias creation", "wildcard target expansion"]
+  ja: ["alias 作成前の問い合わせ型の判定", "ワイルドカードのターゲット展開"]
+status: verified
+config: |
+  local-zone: "example.com." redirect
+  local-data: "example.com. CNAME *.example.net."
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. CNAME"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ["CNAME *.example.net."]
+  note:
+    en: "The man page says the wildcard label gets expanded, with no condition on the query type. Asking for the CNAME itself, for example to check the setting with dig, returns *.example.net. rather than www.example.com.example.net."
+    ja: "man には問い合わせ型の条件を付けずに展開されると書いてある。設定を確かめようと dig で CNAME を問うと、www.example.com.example.net. ではなく *.example.net. が返る"

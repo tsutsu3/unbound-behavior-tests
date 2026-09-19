@@ -1,0 +1,31 @@
+id: forward-addr-port-trailing-garbage-ignored
+title:
+  en: "Trailing characters after the forward-addr @port number are silently ignored"
+  ja: forward-addr の @ポートの数字の後ろに続く文字は黙って無視される
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/net_help.c authextstrtoaddr() parses the port with atoi(s+1), which stops at the first non-digit and reports no error. Only a result of 0 is checked, so 5408abc becomes 5408"
+  ja: "util/net_help.c authextstrtoaddr() は atoi(s+1) でポートを読む。atoi() は最初の数字以外の文字で止まり、エラーを返さない。検査は結果が 0 のときだけなので 5408abc は 5408 になる"
+manual:
+  en: "none (the forward-addr entry says nothing about what may follow the port number)"
+  ja: "none（forward-addr の項に、ポート番号の後ろに何を書けるかの記述がない）"
+layers:
+  en: ["address parsing"]
+  ja: ["アドレス分解"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5408abc
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5408"
+  query: "example.com. A"
+  note:
+    en: "A typo such as @5353x is not caught by checkconf either. @dns is rejected only because atoi() returns 0 for it"
+    ja: "@5353x のような打ち間違いも checkconf では見つからない。@dns が拒否されるのは atoi() が 0 を返すからにすぎない"

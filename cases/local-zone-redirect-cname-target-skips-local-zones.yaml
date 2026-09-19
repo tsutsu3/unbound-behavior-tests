@@ -1,0 +1,35 @@
+id: local-zone-redirect-cname-target-skips-local-zones
+title:
+  en: "The CNAME target of a redirect zone is resolved upstream even when a local-zone covers it"
+  ja: redirect ゾーンの CNAME のターゲットは、local-zone が覆っていても上流で解決される
+chapter: "5.4"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_data_answer() stores the CNAME in qinfo->local_alias and returns. daemon/worker.c worker_handle_request() then replaces the qname with the alias target via local_alias_shallow_copy_qname() and goes on to the cache and the mesh. local_zones_answer() has already run for the original name and is not called again, and the iterator does not consult local zones"
+  ja: "services/localzone.c local_data_answer() は CNAME を qinfo->local_alias に入れて戻るだけ。daemon/worker.c worker_handle_request() が local_alias_shallow_copy_qname() で qname をターゲットに差し替え、キャッシュと mesh へ進む。local_zones_answer() は元の名前で 1 度呼ばれたきりで、iterator も local zone を参照しない"
+manual:
+  en: "doc/unbound.conf.5.in, redirect entry: The resolution proceeds with upstream DNS resolution, and that does not include the lookup in local zones. So the record is not able to point in local zones, but it can point to upstream DNS answers."
+  ja: "doc/unbound.conf.5.in redirect の項: The resolution proceeds with upstream DNS resolution, and that does not include the lookup in local zones. So the record is not able to point in local zones, but it can point to upstream DNS answers."
+layers:
+  en: ["local alias for the CNAME", "resolution of the alias target"]
+  ja: ["CNAME の local alias 化", "alias ターゲットの解決"]
+status: verified
+config: |
+  local-zone: "example.com." redirect
+  local-data: "example.com. CNAME www.example.net."
+  local-zone: "example.net." static
+  local-data: "www.example.net. A 192.0.2.9"
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5409
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5409"
+  query: "example.com. A"
+  note:
+    en: "www.example.net. has local-data in the same server, but the query for it goes to the upstream. The man page says so, but pointing a redirect at your own local-data looks like it should work"
+    ja: "www.example.net. は同じサーバーに local-data があるのに、その問い合わせは上流へ出る。man に書いてあるとおりだが、自分の local-data を redirect の行き先にできそうに見える"

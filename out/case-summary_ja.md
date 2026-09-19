@@ -9,18 +9,18 @@
 
 | 分類 | 件数 |
 | --- | --- |
-| A | 34 |
-| B | 8 |
-| C | 6 |
+| A | 38 |
+| B | 9 |
+| C | 7 |
 | D | 0 |
 | undecided | 1 |
-| 合計 | 49 |
+| 合計 | 55 |
 
 ## 状態別
 
 | 状態 | 件数 |
 | --- | --- |
-| verified | 48 |
+| verified | 54 |
 | needs-test | 0 |
 | inconclusive | 1 |
 
@@ -47,8 +47,11 @@
 | 5.3 | local-zone 名は末尾ドットの有無と大文字小文字を区別せず、同じゾーンとして重複扱いになる | 設定リストの構築順（先頭挿入） + ゾーン名のワイヤ変換と正規化 + ゾーン登録時の重複処理 | `local-zone-name-trailing-dot-and-case-are-same-zone` |
 | 5.3 | local-zone-override は local-zone: が拒否する truncate を受理する | 文法規則の type 検証 + override 登録時の type 変換 | `local-zone-override-accepts-truncate` |
 | 5.3 | local-zone-override は同名の local-zone が既に存在しないと fatal error になる | ゾーン木の完全一致検索 + override 木への挿入 | `local-zone-override-requires-exact-zone` |
+| 5.3 | ルートに deny を置いても、より具体的なゾーンの配下には効かず組み込みゾーンは応答し続ける | 最も近いゾーンの検索 + 組み込みゾーンの登録 | `local-zone-root-deny-keeps-builtin-zones` |
 | 5.3 | always_nodata は動作するが local-zone の type 一覧に載っていない | 文法規則の type 検証 + ゾーン型ごとの応答生成 | `local-zone-type-always-nodata-works` |
 | 5.3 | ipset は文法上は受理されるが ipset 非対応ビルドではゾーン登録で失敗する | 文法規則の type 検証 + ゾーン登録時の type 変換 | `local-zone-type-ipset-accepted-then-fails` |
+| 5.4 | redirect ゾーンの CNAME のターゲットは、local-zone が覆っていても上流で解決される | CNAME の local alias 化 + alias ターゲットの解決 | `local-zone-redirect-cname-target-skips-local-zones` |
+| 5.4 | redirect ゾーンの CNAME ターゲットのワイルドカードは CNAME 以外の問い合わせでだけ展開され、CNAME で問うと * のまま返る | alias 作成前の問い合わせ型の判定 + ワイルドカードのターゲット展開 | `local-zone-redirect-cname-wildcard-not-expanded-for-cname-query` |
 | 5.4 | redirect ゾーンでは CNAME と他の型の local-data を同居させられない | ゾーン型の判定 + local_data ノードの RRset 追加 | `local-zone-redirect-cname-with-other-data` |
 | 5.4 | redirect ゾーンの local-data は頂点と完全一致でなければ fatal error になる | ゾーン頂点の dname 比較 + local-data のゾーン登録 | `local-zone-redirect-non-apex-data` |
 | 5.5 | AAAA の RDATA では IPv6 zone ID（%eth0）が拒否される | RR rdata のワイヤ変換 + ソケットアドレス生成（対比先） | `local-data-aaaa-rejects-ipv6-zone-id` |
@@ -73,7 +76,10 @@
 | 引用符で囲んだ値は行をまたげない（行継続の構文がない） | 設定ファイルの字句解析 | `conf-lexer-no-line-continuation` |
 | forward-addr の件数に上限はない | 転送先リストの構築 | `forward-addr-many-entries-no-limit` |
 | forward-addr の @-1 はエラーにならず 65535 になる | アドレス分解 | `forward-addr-port-negative` |
+| forward-addr の @ポートが数字で始まらないと拒否される | アドレス分解 | `forward-addr-port-non-numeric-rejected` |
 | forward-addr の @ポートは範囲検証されず uint16 に切り詰められる | アドレス分解 | `forward-addr-port-overflow` |
+| forward-addr の @ポートの数字の後ろに続く文字は黙って無視される | アドレス分解 | `forward-addr-port-trailing-garbage-ignored` |
+| forward-addr の @0 はポート 0 として受理される | アドレス分解 | `forward-addr-port-zero-accepted` |
 | local-data の TTL を省略すると 3600 になる | local-data の RR 文字列パース | `local-data-default-ttl-3600` |
 | local-data-ptr は設定パース時に PTR の local-data 文字列へ書き換えられる | 設定パース時の文字列書き換え | `local-data-ptr-is-rewritten-to-local-data` |
 | TXT の character-string はワイヤ長 255 バイトまで受理される | RR rdata のワイヤ変換 | `local-data-txt-255-bytes-ok` |

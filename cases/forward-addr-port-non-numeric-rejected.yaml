@@ -1,0 +1,28 @@
+id: forward-addr-port-non-numeric-rejected
+title:
+  en: "A forward-addr @port that does not start with a digit is rejected"
+  ja: forward-addr の @ポートが数字で始まらないと拒否される
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: 'util/net_help.c authextstrtoaddr(). atoi("dns") is 0 and "dns" is not the string "0", so it returns 0. iterator/iter_fwd.c read_fwds_addr() then logs cannot parse forward ... ip address, and smallapp/unbound-checkconf.c check_fwd() fails'
+  ja: 'util/net_help.c authextstrtoaddr()。atoi("dns") は 0 で、"dns" は文字列 "0" ではないので 0 を返す。iterator/iter_fwd.c read_fwds_addr() が cannot parse forward ... ip address を出し、smallapp/unbound-checkconf.c check_fwd() が失敗する'
+manual:
+  en: "none (the forward-addr entry says the port is a number but not what happens otherwise)"
+  ja: "none（forward-addr の項はポートを数値とするだけで、それ以外を書いたときの扱いの記述がない）"
+layers:
+  en: ["address parsing"]
+  ja: ["アドレス分解"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@dns
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "cannot parse forward . ip address"
+  note:
+    en: "This is the only port value rejected. Out-of-range and negative numbers pass (forward-addr-port-overflow, forward-addr-port-negative)"
+    ja: "ポートの値で拒否されるのはこれだけ。範囲外や負の数は通る（forward-addr-port-overflow、forward-addr-port-negative）"

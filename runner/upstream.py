@@ -16,7 +16,7 @@ Two decisions here carry the weight of the forward-zone results:
   allocated port could not observe that at all.
 
 Nothing is ever sent back.  Unbound simply times out, which is enough --
-what arrives is not inspected, only that it arrived here (plan section 4.4).
+what arrives is not inspected, only that it arrived here.
 """
 
 import queue
