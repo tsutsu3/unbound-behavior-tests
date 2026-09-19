@@ -1,0 +1,26 @@
+id: conf-include-glob-missing-directory-is-error
+title:
+  en: "An include: wildcard under a missing directory is an error that names the pattern itself as the file"
+  ja: "include: のワイルドカードの対象ディレクトリが無いと、パターンそのものをファイル名としたエラーになる"
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configlexer.lex config_start_include_glob() passes GLOB_ERR to glob(), so a directory that cannot be opened aborts the glob with an error other than GLOB_NOMATCH. That branch hands the unexpanded pattern to config_start_include() (let original deal with it), which tries to open a file literally named conf.d/*.conf and fails"
+  ja: "util/configlexer.lex config_start_include_glob() は glob() に GLOB_ERR を渡すので、開けないディレクトリがあると GLOB_NOMATCH 以外のエラーで打ち切られる。その分岐は展開前のパターンを config_start_include() に渡し（let original deal with it）、conf.d/*.conf という名前のファイルを開こうとして失敗する"
+manual:
+  en: "doc/unbound.conf.5.in INCLUDING FILES: Wildcards can be used to include multiple files, see glob(7). (nothing about a pattern whose directory is missing)"
+  ja: "doc/unbound.conf.5.in INCLUDING FILES: Wildcards can be used to include multiple files, see glob(7).（ディレクトリが無いパターンの扱いの記述がない）"
+layers:
+  en: ["glob error handling", "fallback to opening the pattern as a file name"]
+  ja: ["glob のエラー処理", "パターンをファイル名として開く代替処理"]
+status: verified
+config: |
+  include: "conf.d/*.conf"
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "cannot open include file 'conf.d/*.conf'"
+  note:
+    en: "Whether a wildcard that matches nothing is an error depends on whether its directory exists (compare conf-include-glob-no-match-is-silent). The message names conf.d/*.conf as if it were a file, which hides that the directory is what is missing"
+    ja: "何にも一致しないワイルドカードがエラーになるかどうかは、ディレクトリの有無で決まる（conf-include-glob-no-match-is-silent と比較）。メッセージは conf.d/*.conf をファイルのように名指しするので、無いのがディレクトリだと読み取りにくい"

@@ -1,0 +1,32 @@
+id: forward-tls-upstream-keeps-port-53
+title:
+  en: "forward-tls-upstream: yes still connects to port 53 unless @853 or #name is written"
+  ja: "forward-tls-upstream: yes でも @853 か #name を書かなければ 53 番に接続する"
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/net_help.c authextstrtoaddr() starts from port = UNBOUND_DNS_PORT (53) and changes it only for @port or for # (UNBOUND_DNS_OVER_TLS_PORT). forward-tls-upstream sets dp->ssl_upstream in iterator/iter_fwd.c read_forwards() and is never consulted when the address is parsed. daemon/daemon.c always creates the outgoing TLS context, so the TLS connection is attempted"
+  ja: "util/net_help.c authextstrtoaddr() は port = UNBOUND_DNS_PORT (53) から始め、変えるのは @ポートか #（UNBOUND_DNS_OVER_TLS_PORT）のときだけ。forward-tls-upstream は iterator/iter_fwd.c read_forwards() で dp->ssl_upstream に入るだけで、アドレスの解釈では参照されない。daemon/daemon.c は送信用の TLS コンテキストを常に作るので、TLS 接続はそのまま試みられる"
+manual:
+  en: "doc/unbound.conf.5.in, forward-tls-upstream entry: Enabled or disable whether the queries to this forwarder use TLS for transport. (nothing about the port)"
+  ja: "doc/unbound.conf.5.in forward-tls-upstream の項: Enabled or disable whether the queries to this forwarder use TLS for transport.（ポートについての記述がない）"
+layers:
+  en: ["address parsing", "TLS decision (separate layer, not consulted)"]
+  ja: ["アドレス分解", "TLS 判定（別レイヤ・不参照）"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-tls-upstream: yes
+    forward-addr: 127.0.0.1
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: tcp
+    addr: "127.0.0.1:53"
+  query: "example.com. A"
+  note:
+    en: "The mirror image of forward-addr-name-implies-port-853: #name changes the port without TLS, and TLS does not change the port without #name. Turning on TLS alone sends a TLS handshake to port 53, where a plain DNS server will not complete it"
+    ja: "forward-addr-name-implies-port-853 の裏返し。#name は TLS 無しでもポートを変え、TLS は #name 無しではポートを変えない。TLS だけを有効にすると 53 番へ TLS のハンドシェイクを送り、普通の DNS サーバーとは確立しない"

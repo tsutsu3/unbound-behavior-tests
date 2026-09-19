@@ -1,0 +1,31 @@
+id: local-data-cname-in-static-zone-not-chased
+title:
+  en: "In a static zone, an A query for a name with only a CNAME gets the CNAME alone, even when its target is in the same zone"
+  ja: static ゾーンで CNAME だけを持つ名前に A を問うと、ターゲットが同じゾーンにあっても CNAME だけが返る
+chapter: "5.5"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_data_answer() calls local_data_find_type(ld, qtype, 1). With alias_ok set it returns the CNAME RRset when there is no RRset of the asked type. Outside redirect / inform_redirect the answer is encoded from that one RRset by local_encode(), and nothing looks up the target"
+  ja: "services/localzone.c local_data_answer() は local_data_find_type(ld, qtype, 1) を呼ぶ。alias_ok が立っているので、問われた型が無ければ CNAME の RRset を返す。redirect / inform_redirect 以外では local_encode() がその RRset 1 つだけで応答を作り、ターゲットを引く処理は無い"
+manual:
+  en: "doc/unbound.conf.5.in, redirect entry: CNAME resolution is supported only in type redirect local-zone, and in type inform_redirect local-zone."
+  ja: "doc/unbound.conf.5.in redirect の項: CNAME resolution is supported only in type redirect local-zone, and in type inform_redirect local-zone."
+layers:
+  en: ["type lookup that falls back to a CNAME", "answer built from a single RRset"]
+  ja: ["CNAME に切り替わる型の検索", "RRset 1 つからの応答生成"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "www.example.com. CNAME host.example.com."
+  local-data: "host.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ["CNAME host.example.com."]
+  note:
+    en: "The man page says so, but it is written under redirect, far from where you would look when writing a CNAME into a static zone. host.example.com.'s A, a few lines away in the same zone, is not added. Stub resolvers that do not chase CNAMEs themselves get no address"
+    ja: "man に書いてあるが、書いてあるのは redirect の項で、static ゾーンに CNAME を書くときに読む場所ではない。同じゾーンの数行下にある host.example.com. の A も付かない。CNAME を自分で追わないスタブリゾルバはアドレスを得られない"

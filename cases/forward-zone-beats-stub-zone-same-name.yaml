@@ -1,0 +1,34 @@
+id: forward-zone-beats-stub-zone-same-name
+title:
+  en: "A forward-zone and a stub-zone with the same name: the forward-zone silently wins, wherever it is written"
+  ja: 同名の forward-zone と stub-zone では、書いた位置に関係なく forward-zone が黙って勝つ
+chapter: "6.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c processInitRequest() tries forward_request() (L1593) before the stub lookup in step 2 (L1626 onwards), and forwards_lookup() finds the forward zone. iterator/iter_fwd.c make_stub_holes() would punch a hole in the forward tree for a stub-zone, but skips it with the comment Already a forward zone there. and logs nothing"
+  ja: "iterator/iterator.c processInitRequest() は step 2 の stub の検索（L1626 以降）より前に forward_request()（L1593）を試し、forwards_lookup() が転送ゾーンを見つける。iterator/iter_fwd.c make_stub_holes() は stub-zone の位置の転送木に穴を開けるが、同名の転送ゾーンがあると Already a forward zone there. のコメントどおり何も言わずに飛ばす"
+manual:
+  en: "none (neither the stub-zone nor the forward-zone section says which one is used when both have the same name)"
+  ja: "none（stub-zone 節にも forward-zone 節にも、同じ name を両方に書いたときにどちらが使われるかの記述がない）"
+layers:
+  en: ["forward lookup before stub lookup", "stub hole skipped for an existing forward zone"]
+  ja: ["stub より先の転送判定", "既存の転送ゾーンに対する stub の穴あけの省略"]
+status: verified
+config: |
+  forward-zone:
+    name: "example.com."
+    forward-addr: 127.0.0.1@5413
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5412
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5413"
+  query: "www.example.com. A"
+  note:
+    en: "The stub-zone is written last here, yet the forward-zone wins, unlike duplicates of one directive where the last one wins. There is no warning, so the stub-zone just looks ignored"
+    ja: "ここでは stub-zone を後に書いているが forward-zone が勝つ。同じディレクティブの重複で後が勝つのとは違う。警告も出ないので、stub-zone は単に無視されたように見える"

@@ -1,0 +1,29 @@
+id: forward-zone-private-reverse-shadowed-by-builtin
+title:
+  en: "A forward-zone for a private reverse zone is never used: the built-in AS112 zone answers first"
+  ja: プライベートアドレスの逆引きゾーンに forward-zone を書いても、組み込みの AS112 ゾーンが先に答えて使われない
+chapter: "5.6"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/as112.c as112_zone_array contains 168.192.in-addr.arpa., and services/localzone.c local_zone_enter_defaults() adds it as a static zone. daemon/worker.c worker_handle_request() calls local_zones_answer() before the query reaches the iterator, so the static zone answers NXDOMAIN and the forward-zone is never looked up"
+  ja: "util/as112.c as112_zone_array に 168.192.in-addr.arpa. があり、services/localzone.c local_zone_enter_defaults() が static ゾーンとして入れる。daemon/worker.c worker_handle_request() は iterator に渡す前に local_zones_answer() を呼ぶので、static ゾーンが NXDOMAIN を返し、forward-zone は参照されない"
+manual:
+  en: "doc/unbound.conf.5.in, unblock-lan-zones entry: If enabled, then for private address space, the reverse lookups are no longer filtered. (nothing on a forward-zone or stub-zone written for such a zone being overridden)"
+  ja: "doc/unbound.conf.5.in unblock-lan-zones の項: If enabled, then for private address space, the reverse lookups are no longer filtered.（その名前に書いた forward-zone や stub-zone が効かなくなることの記述はない）"
+layers:
+  en: ["local zone answer before iteration", "built-in zone registration"]
+  ja: ["反復解決より前の local zone の応答", "組み込みゾーンの登録"]
+status: verified
+config: |
+  forward-zone:
+    name: "168.192.in-addr.arpa."
+    forward-addr: 127.0.0.1@5414
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "1.1.168.192.in-addr.arpa. PTR"
+  rcode: "NXDOMAIN"
+  note:
+    en: "The usual home setup of sending reverse lookups for the LAN to the router does not work as written. Add local-zone: \"168.192.in-addr.arpa.\" nodefault (see local-zone-nodefault-removes-builtin-zone) or unblock-lan-zones: yes. Had the query been forwarded, the unanswered upstream would have made it SERVFAIL, not NXDOMAIN"
+    ja: "LAN の逆引きをルーターへ転送する家庭向けの定番設定は、そのままでは効かない。local-zone: \"168.192.in-addr.arpa.\" nodefault（local-zone-nodefault-removes-builtin-zone 参照）か unblock-lan-zones: yes が要る。転送されていれば、応答しない上流のせいで NXDOMAIN ではなく SERVFAIL になる"

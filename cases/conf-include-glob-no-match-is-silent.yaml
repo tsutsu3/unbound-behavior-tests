@@ -1,0 +1,28 @@
+id: conf-include-glob-no-match-is-silent
+title:
+  en: "An include: wildcard that matches no file in an existing directory is silently ignored"
+  ja: "include: のワイルドカードは、ディレクトリがあれば 1 ファイルにも一致しなくても黙って無視される"
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configlexer.lex config_start_include_glob() calls glob() with GLOB_ERR when the name contains a wildcard character (*, ?, [, { or ~). If the directory exists but nothing matches, glob() returns GLOB_NOMATCH and the function returns without a word. A name without wildcards goes straight to config_start_include(), which reports a file it cannot open"
+  ja: "util/configlexer.lex config_start_include_glob() は、名前にワイルドカード文字（* ? [ { ~）があれば GLOB_ERR を付けて glob() を呼ぶ。ディレクトリがあって何も一致しなければ glob() は GLOB_NOMATCH を返し、関数は何も言わずに戻る。ワイルドカードを含まない名前は config_start_include() に直接渡り、開けなければエラーになる"
+manual:
+  en: "doc/unbound.conf.5.in INCLUDING FILES: Wildcards can be used to include multiple files, see glob(7). (nothing about a pattern that matches nothing)"
+  ja: "doc/unbound.conf.5.in INCLUDING FILES: Wildcards can be used to include multiple files, see glob(7).（何にも一致しないパターンの扱いの記述がない）"
+layers:
+  en: ["glob expansion order"]
+  ja: ["glob 展開の順序"]
+status: verified
+config: |
+  include: "conf.d/*.conf"
+files:
+  conf.d/README: |
+    Only files ending in .conf are read from here.
+command: unbound-checkconf
+expect:
+  exit: 0
+  note:
+    en: "conf.d/ exists but holds no .conf file. A directory emptied by mistake, or a typo in the extension, passes checkconf, and the settings you meant to include are simply missing. When the directory itself is missing it is an error instead (conf-include-glob-missing-directory-is-error)"
+    ja: "conf.d/ はあるが .conf が無い。うっかり空になったディレクトリや拡張子の打ち間違いは checkconf を通り、読み込むつもりだった設定が単に欠ける。ディレクトリ自体が無いときは逆にエラーになる（conf-include-glob-missing-directory-is-error）"
