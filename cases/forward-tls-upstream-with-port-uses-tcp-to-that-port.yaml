@@ -1,0 +1,32 @@
+id: forward-tls-upstream-with-port-uses-tcp-to-that-port
+title:
+  en: "forward-tls-upstream: yes with @port connects over TCP to that port"
+  ja: "forward-tls-upstream: yes と @port では、そのポートへ TCP で接続する"
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/net_help.c authextstrtoaddr() takes the port from @port. iterator/iterator.c processQueryTargets() passes dp->ssl_upstream to outbound_msg; services/outside_network.c serviced_query uses UDP only when neither tcp_upstream nor ssl_upstream is set, and outnet_tcp_take_into_use() starts TLS when ssl_upstream is set"
+  ja: "util/net_help.c authextstrtoaddr() がポートを @port から取る。iterator/iterator.c processQueryTargets() が dp->ssl_upstream を送信側へ渡し、services/outside_network.c は tcp_upstream も ssl_upstream も立っていないときだけ UDP を使う。outnet_tcp_take_into_use() は ssl_upstream が立っていれば TLS を始める"
+manual:
+  en: "none (the forward-tls-upstream entry does not mention the port)"
+  ja: "none（forward-tls-upstream の項にポートの記述がない）"
+layers:
+  en: ["address parsing", "transport selection"]
+  ja: ["アドレス分解", "トランスポートの選択"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-tls-upstream: yes
+    forward-addr: 127.0.0.1@5609
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: tcp
+    addr: "127.0.0.1:5609"
+  query: "example.com. A"
+  note:
+    en: "Only the TCP connection is observed, not whether a TLS handshake is sent on it"
+    ja: "観測するのは TCP の接続だけで、その上で TLS のハンドシェイクが送られるかは見ていない"

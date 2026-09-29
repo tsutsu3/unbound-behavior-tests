@@ -1,0 +1,28 @@
+id: unblock-lan-zones-keeps-special-use-zones
+title:
+  en: "unblock-lan-zones: yes keeps the special-use built-in zones such as home.arpa."
+  ja: "unblock-lan-zones: yes でも home.arpa. などの特別用途の組み込みゾーンは残る"
+chapter: "5.5"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zone_enter_defaults() checks cfg->unblock_lan_zones only around the as112_zones loop. localhost., local_zones_default_reverse and local_zones_default_special (test., invalid., onion., home.arpa., resolver.arpa., service.arpa.) are entered regardless"
+  ja: "services/localzone.c local_zone_enter_defaults() は cfg->unblock_lan_zones を as112_zones のループの周りでしか見ない。localhost.、local_zones_default_reverse、local_zones_default_special（test.、invalid.、onion.、home.arpa.、resolver.arpa.、service.arpa.）はそれによらず入る"
+manual:
+  en: "doc/unbound.conf.5.in, unblock-lan-zones entry: When enabled, only localhost, 127.0.0.1 reverse and ::1 reverse zones are configured with default local zones."
+  ja: "doc/unbound.conf.5.in unblock-lan-zones の項: When enabled, only localhost, 127.0.0.1 reverse and ::1 reverse zones are configured with default local zones."
+layers:
+  en: ["built-in zone registration"]
+  ja: ["組み込みゾーンの登録"]
+status: verified
+config: |
+  unblock-lan-zones: yes
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "home.arpa. SOA"
+  rcode: "NOERROR"
+  answer_contains: ["nobody.invalid."]
+  note:
+    en: "By the man page only three zones remain; by the source nine do"
+    ja: "man では残るのは3個、ソースでは9個"

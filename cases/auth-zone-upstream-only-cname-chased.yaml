@@ -1,0 +1,52 @@
+id: auth-zone-upstream-only-cname-chased
+title:
+  en: "With for-downstream: no and for-upstream: yes, a CNAME pointing outside the zone is chased to the end"
+  ja: "for-downstream: no と for-upstream: yes では、ゾーンの外を指す CNAME も最後までたどられる"
+chapter: "6.3"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "services/authzone.c auth_zones_downstream_answer() returns 0 when z->for_downstream is off, so the query goes through the mesh. iterator/iterator.c processQueryTargets() calls auth_zones_lookup(), which answers from a zone with for_upstream set; the CNAME in that answer makes the iterator restart for the target, which is again answered from the example.net. auth-zone"
+  ja: "services/authzone.c auth_zones_downstream_answer() は z->for_downstream が無効なら 0 を返し、問い合わせは mesh を通る。iterator/iterator.c processQueryTargets() が auth_zones_lookup() を呼び、for_upstream のゾーンから答える。その答えの CNAME で iterator がターゲットについてやり直し、ターゲットも example.net. の auth-zone から答えが得られる"
+manual:
+  en: "doc/unbound.conf.5.in, Authority Zone Options: In this case, the aforementioned CNAME example will result in a thoroughly resolved answer."
+  ja: "doc/unbound.conf.5.in Authority Zone Options 節: In this case, the aforementioned CNAME example will result in a thoroughly resolved answer."
+layers:
+  en: ["downstream answer skipped", "auth zone lookup inside the iterator", "CNAME restart"]
+  ja: ["downstream の応答の省略", "iterator 内での auth ゾーンの参照", "CNAME によるやり直し"]
+status: verified
+config: |
+  auth-zone:
+    name: "example.org."
+    zonefile: "example.org.zone"
+    for-downstream: no
+    for-upstream: yes
+  auth-zone:
+    name: "example.net."
+    zonefile: "example.net.zone"
+    for-downstream: no
+    for-upstream: yes
+files:
+  example.org.zone: |
+    $ORIGIN example.org.
+    @      3600 IN SOA ns.example.org. host.example.org. 1 3600 600 86400 300
+    @      3600 IN NS  ns.example.org.
+    ns     3600 IN A   192.0.2.1
+    alias  3600 IN CNAME ns.example.org.
+    www    3600 IN CNAME www.example.net.
+  example.net.zone: |
+    $ORIGIN example.net.
+    @      3600 IN SOA ns.example.net. host.example.net. 1 3600 600 86400 300
+    @      3600 IN NS  ns.example.net.
+    ns     3600 IN A   192.0.2.2
+    www    3600 IN A   192.0.2.80
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.org. A"
+  rcode: "NOERROR"
+  answer_count: 2
+  answer_contains: ["CNAME www.example.net.", "192.0.2.80"]
+  note:
+    en: "Same zone data as auth-zone-downstream-cname-out-of-zone-not-chased; only for-downstream differs, and the answer gains the A record"
+    ja: "auth-zone-downstream-cname-out-of-zone-not-chased と同じゾーンのデータで、for-downstream だけが違う。応答に A が加わる"

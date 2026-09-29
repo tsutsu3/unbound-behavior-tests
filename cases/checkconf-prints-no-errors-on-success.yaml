@@ -1,0 +1,27 @@
+id: checkconf-prints-no-errors-on-success
+title:
+  en: "On success unbound-checkconf prints one line: no errors in <file>"
+  ja: 通った設定では unbound-checkconf が no errors in <ファイル> の1行を出す
+chapter: "5.1"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "smallapp/unbound-checkconf.c checkconf() ends with printf(\"unbound-checkconf: no errors in %s\\n\", cfgfile) unless -q is given. cfgfile is the path as given on the command line"
+  ja: "smallapp/unbound-checkconf.c checkconf() は -q がなければ最後に printf(\"unbound-checkconf: no errors in %s\\n\", cfgfile) を出す。cfgfile はコマンドラインで渡したパスのまま"
+manual:
+  en: "none (unbound-checkconf.8.in gives the exit codes but not the text printed on success)"
+  ja: "none（unbound-checkconf.8.in は終了コードを書くが、成功時に出す文字列は書いていない）"
+layers:
+  en: ["checkconf result report"]
+  ja: ["checkconf の結果表示"]
+status: verified
+config: |
+  local-zone: "home.arpa." static
+  local-data: "nas.home.arpa. A 192.168.1.10"
+command: unbound-checkconf
+expect:
+  exit: 0
+  stderr_contains: "unbound-checkconf: no errors in unbound.conf"
+  note:
+    en: "The runner passes the file name unbound.conf, so that is the name printed. The line goes to stdout; the runner searches stdout and stderr together"
+    ja: "ランナーは unbound.conf というファイル名で渡すので、その名前が出る。出力先は標準出力で、ランナーは標準出力と標準エラー出力をまとめて検索する"

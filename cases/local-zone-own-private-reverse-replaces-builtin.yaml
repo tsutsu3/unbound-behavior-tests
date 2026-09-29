@@ -1,0 +1,29 @@
+id: local-zone-own-private-reverse-replaces-builtin
+title:
+  en: "local-zone 168.192.in-addr.arpa. static replaces the built-in zone, without its SOA"
+  ja: local-zone 168.192.in-addr.arpa. static を書くと組み込みゾーンが置き換わり、その SOA は入らない
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c add_empty_default() returns early when lz_exists() finds 168.192.in-addr.arpa. entered by lz_enter_zones(). The apex exists as an empty non-terminal from lz_find_create_node(), so SOA gets NOERROR with no records"
+  ja: "services/localzone.c add_empty_default() は lz_enter_zones() が入れた 168.192.in-addr.arpa. を lz_exists() で見つけると何もせず戻る。頂点は lz_find_create_node() が作る空の中間ノードなので、SOA には NOERROR でレコードなしが返る"
+manual:
+  en: "doc/unbound.conf.5.in, default zones: The defaults can be turned off by specifying your own local-zone of that name, or using the nodefault type."
+  ja: "doc/unbound.conf.5.in 既定ゾーン: The defaults can be turned off by specifying your own local-zone of that name, or using the nodefault type."
+layers:
+  en: ["built-in zone registration order"]
+  ja: ["組み込みゾーンの登録順"]
+status: verified
+config: |
+  local-zone: "168.192.in-addr.arpa." static
+  local-data-ptr: "192.168.1.10 nas.home.arpa."
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "168.192.in-addr.arpa. SOA"
+  rcode: "NOERROR"
+  answer_count: 0
+  note:
+    en: "With the built-in zone the same query returns the SOA with nobody.invalid."
+    ja: "組み込みゾーンなら同じ問い合わせに nobody.invalid. の SOA が返る"

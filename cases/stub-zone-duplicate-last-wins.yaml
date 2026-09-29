@@ -1,0 +1,34 @@
+id: stub-zone-duplicate-last-wins
+title:
+  en: "With two stub-zone clauses for the same name, the one written last wins"
+  ja: 同名の stub-zone を2つ書くと、設定ファイルで後に書いた方が勝つ
+chapter: "5.6"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configparser.y stubstart inserts each stub-zone clause at the head of cfg->stubs, so iterator/iter_hints.c read_stubs() walks them in reverse order. hints_insert() logs second hints for zone %s ignored. when name_tree_insert() fails and frees the new one, so the clause written last remains"
+  ja: "util/configparser.y stubstart が stub-zone 節を cfg->stubs の先頭に挿入するので、iterator/iter_hints.c read_stubs() は記述と逆順に処理する。hints_insert() は name_tree_insert() が失敗すると second hints for zone %s ignored. を出して新しい方を捨てるので、最後に書いた節が残る"
+manual:
+  en: "none (the stub-zone section does not say what happens when a name is repeated)"
+  ja: "none（stub-zone 節の説明に、同じ name を2回書いたときの扱いの記述がない）"
+layers:
+  en: ["config list build order (head insertion)", "duplicate handling at stub zone registration"]
+  ja: ["設定リストの構築順（先頭挿入）", "スタブゾーン登録時の重複処理"]
+status: verified
+config: |
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5507
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5508
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5508"
+  query: "www.example.com. A"
+  note:
+    en: "Same double reversal as forward-zone-duplicate-last-wins. The log says ignored, but it is the clause written earlier that is ignored"
+    ja: "forward-zone-duplicate-last-wins と同じ二重の反転。ログの ignored が指すのは先に書いた方"

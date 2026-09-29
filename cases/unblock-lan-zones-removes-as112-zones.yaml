@@ -1,0 +1,32 @@
+id: unblock-lan-zones-removes-as112-zones
+title:
+  en: "unblock-lan-zones: yes removes the AS112 built-in zones, so a private reverse query reaches the forwarder"
+  ja: "unblock-lan-zones: yes は AS112 の組み込みゾーンを外し、プライベートアドレスの逆引きが転送先へ届く"
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zone_enter_defaults() skips the whole util/as112.c as112_zone_array loop when cfg->unblock_lan_zones is set, so 10.in-addr.arpa. is not a local zone and the query goes to the iterator"
+  ja: "services/localzone.c local_zone_enter_defaults() は cfg->unblock_lan_zones があると util/as112.c as112_zone_array のループを丸ごと飛ばすので、10.in-addr.arpa. はローカルゾーンにならず、問い合わせは iterator へ進む"
+manual:
+  en: "doc/unbound.conf.5.in, unblock-lan-zones entry: If enabled, then for private address space, the reverse lookups are no longer filtered."
+  ja: "doc/unbound.conf.5.in unblock-lan-zones の項: If enabled, then for private address space, the reverse lookups are no longer filtered."
+layers:
+  en: ["built-in zone registration"]
+  ja: ["組み込みゾーンの登録"]
+status: verified
+config: |
+  unblock-lan-zones: yes
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5506
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5506"
+  query: "1.0.0.10.in-addr.arpa. PTR"
+  note:
+    en: "Not only 168.192.in-addr.arpa.: 10.in-addr.arpa. is removed as well"
+    ja: "168.192.in-addr.arpa. だけでなく 10.in-addr.arpa. も外れる"

@@ -1,0 +1,27 @@
+id: checkconf-warns-duplicate-local-zone
+title:
+  en: "unbound-checkconf itself prints the duplicate local-zone warning and exits 0"
+  ja: unbound-checkconf 自身も duplicate local-zone の警告を出し、終了コード 0 で終わる
+chapter: "5.6"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "smallapp/unbound-checkconf.c localzonechecks() calls services/localzone.c local_zones_apply_cfg(), whose lz_enter_zone_dname() does log_warn(\"duplicate local-zone %s\") and returns the existing zone. checkconf calls log_init(NULL, 0, NULL), so the warning goes to stderr"
+  ja: "smallapp/unbound-checkconf.c localzonechecks() が services/localzone.c local_zones_apply_cfg() を呼び、lz_enter_zone_dname() が log_warn(\"duplicate local-zone %s\") を出して既存のゾーンを返す。checkconf は log_init(NULL, 0, NULL) なので警告は標準エラー出力に出る"
+manual:
+  en: "none (the man page says nothing about duplicate local-zone)"
+  ja: "none（重複 local-zone に関する記述が man にない）"
+layers:
+  en: ["duplicate handling at zone registration", "checkconf extra checks"]
+  ja: ["ゾーン登録時の重複処理", "checkconf の追加検査"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-zone: "example.com." refuse
+command: unbound-checkconf
+expect:
+  exit: 0
+  stderr_contains: "duplicate local-zone example.com."
+  note:
+    en: "The warning can be caught before starting Unbound, if stderr is read"
+    ja: "標準エラー出力を読めば、起動する前に気付ける"

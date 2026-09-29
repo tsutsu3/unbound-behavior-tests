@@ -1,0 +1,36 @@
+id: local-zone-redirect-cname-wildcard-expanded-for-a-query
+title:
+  en: "For an A query, the * in a redirect zone's CNAME target becomes the query name and the expanded target is resolved"
+  ja: A の問い合わせでは、redirect ゾーンの CNAME ターゲットの * が問い合わせ名になり、展開したターゲットが解決される
+chapter: "5.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_data_answer(): for redirect, qtype != CNAME and a CNAME apex rrset, it builds qinfo->local_alias and, when dname_is_wild(ctarget), writes the qname followed by the target minus its * label. daemon/worker.c worker_handle_request() resolves the alias target through the mesh, and util/data/msgencode.c puts the alias CNAME in front of the answer"
+  ja: "services/localzone.c local_data_answer() は redirect で qtype が CNAME でなく頂点が CNAME のとき qinfo->local_alias を作り、dname_is_wild(ctarget) なら問い合わせ名に * のラベルを除いたターゲットをつなげる。daemon/worker.c worker_handle_request() が alias のターゲットを mesh で解決し、util/data/msgencode.c が alias の CNAME を応答の先頭に置く"
+manual:
+  en: "doc/unbound.conf.5.in, redirect entry: it is supported that in the target of the record a wildcard label gets expanded to the query name, with for example: example.com. CNAME *.foo.net. gets expanded to www.example.com. CNAME www.example.com.foo.net."
+  ja: "doc/unbound.conf.5.in redirect の項: it is supported that in the target of the record a wildcard label gets expanded to the query name, with for example: example.com. CNAME *.foo.net. gets expanded to www.example.com. CNAME www.example.com.foo.net."
+layers:
+  en: ["local alias for the CNAME", "resolution of the alias target"]
+  ja: ["CNAME の local alias 化", "alias ターゲットの解決"]
+status: verified
+config: |
+  interface: 127.0.0.1@5520
+  local-zone: "example.com." redirect
+  local-data: "example.com. CNAME *.example.net."
+  local-zone: "example.net." static
+  local-data: "www.example.com.example.net. A 192.0.2.9"
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5520
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["www.example.com. 3600 IN CNAME www.example.com.example.net.", "192.0.2.9"]
+  answer_count: 2
+  note:
+    en: "The upstream is this same Unbound on a second interface (127.0.0.1@5520): the forwarded query for the expanded target arrives there as a new client query and is answered from example.net. The local zone is not used for the target on the first pass (see local-zone-redirect-cname-target-skips-local-zones)"
+    ja: "上流は2つ目の待ち受け（127.0.0.1@5520）の同じ Unbound で、展開したターゲットの問い合わせはそこへ新しいクライアントの問い合わせとして届き、example.net. から答えられる。1回目の処理でターゲットにローカルゾーンが使われるわけではない（local-zone-redirect-cname-target-skips-local-zones 参照）"

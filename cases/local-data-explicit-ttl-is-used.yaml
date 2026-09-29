@@ -1,0 +1,30 @@
+id: local-data-explicit-ttl-is-used
+title:
+  en: "A TTL written in local-data is the TTL of the answer"
+  ja: local-data に書いた TTL が応答の TTL になる
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "sldns/str2wire.c rrinternal_get_ttl() reads the number after the owner name as the TTL, and services/localzone.c local_encode() encodes with time 0, so the stored TTL is sent as is"
+  ja: "sldns/str2wire.c rrinternal_get_ttl() が名前の後の数値を TTL として読み、services/localzone.c local_encode() は時刻 0 で符号化するので、入れた TTL がそのまま出る"
+manual:
+  en: "none (the local-data entry does not describe the TTL field)"
+  ja: "none（local-data の項は TTL の欄を説明していない）"
+layers:
+  en: ["local-data RR string parsing"]
+  ja: ["local-data の RR 文字列パース"]
+status: verified
+config: |
+  local-zone: "home.arpa." static
+  local-data: "nas.home.arpa. 300 A 192.168.1.10"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "nas.home.arpa. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.168.1.10"]
+  answer_ttl: 300
+  note:
+    en: "Pairs with local-data-default-ttl-3600"
+    ja: "local-data-default-ttl-3600 と対になる"

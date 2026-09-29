@@ -1,0 +1,30 @@
+id: local-zone-home-arpa-static-answers-local-data
+title:
+  en: "A static home.arpa. zone answers the local-data written under it"
+  ja: static の home.arpa. ゾーンは、その下に書いた local-data で答える
+chapter: "5.1"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zones_apply_cfg() enters the configured home.arpa. zone before local_zone_enter_defaults(), whose add_empty_default() skips the built-in home.arpa. because lz_exists() finds it. local_zones_answer() picks home.arpa. and local_data_answer() answers the exact match with the default TTL 3600 given by rrstr_get_rr_content()"
+  ja: "services/localzone.c local_zones_apply_cfg() は設定の home.arpa. ゾーンを local_zone_enter_defaults() より先に入れ、add_empty_default() は lz_exists() で見つけて組み込みを入れない。local_zones_answer() が home.arpa. を選び、local_data_answer() が完全一致で答える。TTL は rrstr_get_rr_content() が渡す既定の 3600"
+manual:
+  en: "doc/unbound.conf.5.in, static entry: If there is a match from local data, the query is answered."
+  ja: "doc/unbound.conf.5.in static の項: If there is a match from local data, the query is answered."
+layers:
+  en: ["answer from local data"]
+  ja: ["local data からの応答"]
+status: verified
+config: |
+  local-zone: "home.arpa." static
+  local-data: "nas.home.arpa. A 192.168.1.10"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "nas.home.arpa. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.168.1.10"]
+  answer_ttl: 3600
+  note:
+    en: "The minimal home.arpa. example of the book, as written"
+    ja: "本書の home.arpa. の最小例をそのまま動かしたもの"

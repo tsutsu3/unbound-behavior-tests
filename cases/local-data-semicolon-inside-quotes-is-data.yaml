@@ -1,0 +1,30 @@
+id: local-data-semicolon-inside-quotes-is-data
+title:
+  en: "Inside a double-quoted TXT string in local-data, ; is data, not a comment"
+  ja: local-data の TXT の二重引用符の内側では ; はコメントにならずデータになる
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "sldns/str2wire.c rrinternal_get_quoted() switches the delimiter to \" when the TXT value starts with \", and sldns/parse.c sldns_bget_token_par() sets quoted = 1 for that delimiter, so the c == ';' && quoted == 0 comment branch is not taken"
+  ja: "sldns/str2wire.c rrinternal_get_quoted() は TXT の値が \" で始まると区切りを \" に切り替え、sldns/parse.c sldns_bget_token_par() はその区切りで quoted = 1 とするので、c == ';' && quoted == 0 のコメントの分岐に入らない"
+manual:
+  en: "none (the man page does not mention that ; starts a comment inside a local-data value)"
+  ja: "none（local-data の値の中で ; がコメントになることを man は書いていない）"
+layers:
+  en: ["rdata tokenisation of RR text"]
+  ja: ["RR テキストの rdata トークン分割"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: 'example.com. TXT "v=DMARC1; p=none"'
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. TXT"
+  rcode: "NOERROR"
+  answer_contains: ['"v=DMARC1; p=none"']
+  answer_count: 1
+  note:
+    en: "Pairs with local-data-semicolon-starts-rr-comment, which puts ; outside quotes"
+    ja: "引用符の外の ; を試す local-data-semicolon-starts-rr-comment と対になる"

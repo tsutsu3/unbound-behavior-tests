@@ -1,0 +1,30 @@
+id: local-zone-subzone-keeps-builtin-home-arpa
+title:
+  en: "A local-zone for lan.home.arpa. leaves the built-in home.arpa. in place, and it answers NXDOMAIN outside lan.home.arpa."
+  ja: lan.home.arpa. だけに local-zone を書いても組み込みの home.arpa. は残り、lan.home.arpa. の外の名前に NXDOMAIN を返す
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c lz_exists() is an exact rbtree_search(), so lan.home.arpa. does not stop add_empty_default() from entering home.arpa. local_zones_tags_lookup() picks home.arpa. for printer.home.arpa. and logs using localzone home.arpa. static at verbosity 4"
+  ja: "services/localzone.c lz_exists() は完全一致の rbtree_search() なので、lan.home.arpa. は add_empty_default() が home.arpa. を入れるのを止めない。printer.home.arpa. には local_zones_tags_lookup() が home.arpa. を選び、verbosity 4 で using localzone home.arpa. static を出す"
+manual:
+  en: "doc/unbound.conf.5.in, default zones: The defaults can be turned off by specifying your own local-zone of that name, or using the nodefault type. (a local-zone below the name is not mentioned)"
+  ja: "doc/unbound.conf.5.in 既定ゾーン: The defaults can be turned off by specifying your own local-zone of that name, or using the nodefault type.（下の名前の local-zone には触れていない）"
+layers:
+  en: ["built-in zone registration", "closest zone lookup"]
+  ja: ["組み込みゾーンの登録", "最も近いゾーンの検索"]
+status: verified
+config: |
+  verbosity: 4
+  local-zone: "lan.home.arpa." static
+  local-data: "pc.lan.home.arpa. A 192.168.1.30"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "printer.home.arpa. A"
+  rcode: "NXDOMAIN"
+  stderr_contains: "using localzone home.arpa. static"
+  note:
+    en: "The name only matches exactly; a zone below does not replace the built-in one"
+    ja: "置き換えは名前の完全一致だけで、下の名前のゾーンは組み込みを置き換えない"

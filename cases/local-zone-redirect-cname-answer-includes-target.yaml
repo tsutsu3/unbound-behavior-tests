@@ -1,0 +1,36 @@
+id: local-zone-redirect-cname-answer-includes-target
+title:
+  en: "The answer from a redirect zone's apex CNAME includes the resolved target records"
+  ja: redirect ゾーンの頂点の CNAME の応答には、解決したターゲットの RR も入る
+chapter: "5.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_data_answer() stores the CNAME in qinfo->local_alias. daemon/worker.c worker_handle_request() resolves the target through the mesh, and util/data/msgencode.c reply_info_encode() puts the local_alias rrset before the resolved answer"
+  ja: "services/localzone.c local_data_answer() が CNAME を qinfo->local_alias に入れる。daemon/worker.c worker_handle_request() がターゲットを mesh で解決し、util/data/msgencode.c reply_info_encode() が local_alias の RRset を解決した答えの前に置く"
+manual:
+  en: "doc/unbound.conf.5.in, redirect entry: In that case, the CNAME is resolved and the answer includes resolved target records as well."
+  ja: "doc/unbound.conf.5.in redirect の項: In that case, the CNAME is resolved and the answer includes resolved target records as well."
+layers:
+  en: ["local alias for the CNAME", "resolution of the alias target"]
+  ja: ["CNAME の local alias 化", "alias ターゲットの解決"]
+status: verified
+config: |
+  interface: 127.0.0.1@5521
+  local-zone: "example.com." redirect
+  local-data: "example.com. CNAME target.example.net."
+  local-zone: "example.net." static
+  local-data: "target.example.net. A 192.0.2.9"
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5521
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["www.example.com. 3600 IN CNAME target.example.net.", "192.0.2.9"]
+  answer_count: 2
+  note:
+    en: "The upstream is this same Unbound on a second interface (127.0.0.1@5521), which answers the forwarded target query from example.net."
+    ja: "上流は2つ目の待ち受け（127.0.0.1@5521）の同じ Unbound で、転送されたターゲットの問い合わせに example.net. から答える"

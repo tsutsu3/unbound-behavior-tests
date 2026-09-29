@@ -1,0 +1,43 @@
+id: local-zone-beats-auth-zone-for-downstream
+title:
+  en: "When a local-zone and a for-downstream auth-zone cover the same name, the local-zone answers"
+  ja: 同じ名前に local-zone と for-downstream の auth-zone があると、local-zone が答える
+chapter: "4.5"
+category: undecided
+versions: ["1.26.0"]
+source:
+  en: "daemon/worker.c worker_handle_request() calls local_zones_answer() before auth_zones_downstream_answer() and sends the reply as soon as the local zone answers"
+  ja: "daemon/worker.c worker_handle_request() は auth_zones_downstream_answer() より前に local_zones_answer() を呼び、local zone が答えればその場で応答する"
+manual:
+  en: "doc/unbound.conf.rst Authority Zone Options: With for-downstream: yes (default), authority zones are processed after local-zones and before cache."
+  ja: "doc/unbound.conf.rst Authority Zone Options: With for-downstream: yes (default), authority zones are processed after local-zones and before cache."
+layers:
+  en: ["local zone answer before auth-zone"]
+  ja: ["auth-zone より前の local zone の応答"]
+status: verified
+config: |
+  local-zone: "example.org." static
+  local-data: "www.example.org. A 192.0.2.1"
+  auth-zone:
+    name: "example.org."
+    zonefile: "example.org.zone"
+    for-downstream: yes
+    for-upstream: no
+files:
+  example.org.zone: |
+    $ORIGIN example.org.
+    $TTL 300
+    @ IN SOA ns.example.org. host.example.org. 1 3600 900 604800 300
+    @ IN NS ns.example.org.
+    ns IN A 192.0.2.53
+    www IN A 192.0.2.2
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.org. A"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ["192.0.2.1"]
+  note:
+    en: "Category undecided: the result matches the manual"
+    ja: "分類 undecided: man の記述どおり"

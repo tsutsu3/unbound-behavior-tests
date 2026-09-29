@@ -1,0 +1,40 @@
+id: local-zone-beats-rpz-qname-trigger
+title:
+  en: "An RPZ QNAME trigger does not override local-data for the same name: the local-zone answers first"
+  ja: RPZ の QNAME トリガーは同じ名前の local-data を覆さない。local-zone が先に答える
+chapter: "4.5"
+category: undecided
+versions: ["1.26.0"]
+source:
+  en: "daemon/worker.c worker_handle_request() calls local_zones_answer() before rpz_callback_from_worker_request()"
+  ja: "daemon/worker.c worker_handle_request() は rpz_callback_from_worker_request() より前に local_zones_answer() を呼ぶ"
+manual:
+  en: "doc/unbound.conf.rst Response Policy Zone Options: RPZ QNAME triggers are applied after any local-zone and before any auth-zone."
+  ja: "doc/unbound.conf.rst Response Policy Zone Options: RPZ QNAME triggers are applied after any local-zone and before any auth-zone."
+layers:
+  en: ["local zone answer before RPZ"]
+  ja: ["RPZ より前の local zone の応答"]
+status: verified
+config: |
+  module-config: "respip validator iterator"
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+  rpz:
+    name: "rpz.local."
+    zonefile: "rpz.zone"
+files:
+  rpz.zone: |
+    $ORIGIN rpz.local.
+    $TTL 300
+    @ IN SOA ns.rpz.local. host.rpz.local. 1 3600 900 604800 300
+    @ IN NS ns.rpz.local.
+    www.example.com IN CNAME .
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.0.2.1"]
+  note:
+    en: "Category undecided: the result matches the manual. The RPZ rule would give NXDOMAIN (CNAME .) if it were applied. respip is added to module-config because the manual asks for it"
+    ja: "分類 undecided: man の記述どおり。RPZ の規則（CNAME .）が当たれば NXDOMAIN になる。respip は man の指示に従って module-config に加えた"

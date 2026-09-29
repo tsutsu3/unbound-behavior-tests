@@ -1,0 +1,31 @@
+id: local-data-ttl-ignores-cache-min-ttl
+title:
+  en: "cache-min-ttl does not change the TTL of a local-data answer"
+  ja: cache-min-ttl は local-data の応答の TTL を変えない
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "cache-min-ttl is applied through MIN_TTL / MAX_TTL in util/data/msgreply.c and services/cache/dns.c when a reply from upstream is parsed and cached. services/localzone.c local_encode() builds the local answer directly from the local-data rrset and never passes through that code"
+  ja: "cache-min-ttl は util/data/msgreply.c と services/cache/dns.c の MIN_TTL / MAX_TTL として、上流の応答を解析してキャッシュに入れるときに効く。services/localzone.c local_encode() は local-data の RRset から直接応答を作り、その経路を通らない"
+manual:
+  en: "none (the cache-min-ttl entry speaks of the cache and does not mention local-data)"
+  ja: "none（cache-min-ttl の項はキャッシュについて書き、local-data に触れていない）"
+layers:
+  en: ["answer from local data"]
+  ja: ["local data からの応答"]
+status: verified
+config: |
+  cache-min-ttl: 7200
+  local-zone: "example.com." static
+  local-data: "example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.0.2.1"]
+  answer_ttl: 3600
+  note:
+    en: "The default 3600 stays with cache-min-ttl: 7200"
+    ja: "cache-min-ttl: 7200 でも既定の 3600 のまま"

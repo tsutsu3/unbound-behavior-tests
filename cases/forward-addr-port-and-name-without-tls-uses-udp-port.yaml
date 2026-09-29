@@ -1,0 +1,31 @@
+id: forward-addr-port-and-name-without-tls-uses-udp-port
+title:
+  en: "addr@port#name without forward-tls-upstream sends plain UDP to that port"
+  ja: "forward-tls-upstream なしの addr@port#name は、そのポートへ平文の UDP で送る"
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/net_help.c authextstrtoaddr() finds @, takes the port with atoi(), and records the text after # as auth_name only. Without ssl_upstream, services/outside_network.c sends over UDP and the auth name is not read"
+  ja: "util/net_help.c authextstrtoaddr() は @ を見つけて atoi() でポートを取り、# の後ろは auth_name として記録するだけ。ssl_upstream が無ければ services/outside_network.c は UDP で送り、名前は読まれない"
+manual:
+  en: "none (the forward-addr entry says the name is used If TLS is enabled, but not what happens to it otherwise)"
+  ja: "none（forward-addr の項は If TLS is enabled のときに名前を使うとするだけで、それ以外の扱いの記述がない）"
+layers:
+  en: ["address parsing", "transport selection"]
+  ja: ["アドレス分解", "トランスポートの選択"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: "127.0.0.1@5610#example.com"
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5610"
+  query: "example.com. A"
+  note:
+    en: "With @port present, #name no longer changes the port (contrast forward-addr-name-implies-port-853)"
+    ja: "@port があれば #name はポートを変えない（forward-addr-name-implies-port-853 と対照）"

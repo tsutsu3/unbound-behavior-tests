@@ -1,0 +1,31 @@
+id: local-zone-nodefault-local-data-gets-implicit-zone
+title:
+  en: "local-data under a name turned off with nodefault goes into an implicit transparent zone"
+  ja: nodefault で外した名前の下の local-data は暗黙の transparent ゾーンに入る
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configparser.y server_local_zone puts nodefault into cfg->local_zones_nodefault, not cfg->local_zones, and services/localzone.c add_empty_default() skips test. by lz_nodefault(). No zone covers a.test., so lz_setup_implicit() creates a transparent zone at a.test."
+  ja: "util/configparser.y server_local_zone は nodefault を cfg->local_zones ではなく cfg->local_zones_nodefault に入れ、services/localzone.c add_empty_default() は lz_nodefault() で test. を入れない。a.test. を覆うゾーンがないので lz_setup_implicit() が a.test. に transparent ゾーンを作る"
+manual:
+  en: "none (the nodefault entry says it has no other effect than turning off default contents; nothing on local-data written under it)"
+  ja: "none（nodefault の項は既定の中身を外す以外の効果はないと書くだけで、その下に書いた local-data には触れていない）"
+layers:
+  en: ["nodefault handling", "implicit zone creation"]
+  ja: ["nodefault の処理", "暗黙ゾーン生成"]
+status: verified
+config: |
+  verbosity: 4
+  local-zone: "test." nodefault
+  local-data: "a.test. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "a.test. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.0.2.1"]
+  stderr_contains: "using localzone a.test. transparent"
+  note:
+    en: "nodefault does not leave an empty zone behind for the local-data to go into"
+    ja: "nodefault は local-data の入る空のゾーンを残さない"

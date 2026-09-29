@@ -1,0 +1,30 @@
+id: local-data-underscore-label-accepted
+title:
+  en: "A local-data owner name with an underscore label is accepted and answered"
+  ja: 下線で始まるラベルを含む名前の local-data は受け付けられ、答えられる
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "sldns/str2wire.c sldns_str2wire_dname_buf_rel() treats only . and \\ specially and copies every other byte into the label"
+  ja: "sldns/str2wire.c sldns_str2wire_dname_buf_rel() が特別に扱うのは . と \\ だけで、ほかのバイトはそのままラベルに入れる"
+manual:
+  en: "none (the local-data entry says nothing about which characters a name may contain)"
+  ja: "none（local-data の項は名前に使える文字を書いていない）"
+layers:
+  en: ["local-data RR string parsing"]
+  ja: ["local-data の RR 文字列パース"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: '_dmarc.example.com. TXT "v=DMARC1"'
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "_dmarc.example.com. TXT"
+  rcode: "NOERROR"
+  answer_contains: ['"v=DMARC1"']
+  answer_count: 1
+  note:
+    en: "Names such as _dmarc and _sip._tcp can be written as they are"
+    ja: "_dmarc や _sip._tcp のような名前はそのまま書ける"

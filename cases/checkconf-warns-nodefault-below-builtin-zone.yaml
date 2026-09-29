@@ -1,0 +1,26 @@
+id: checkconf-warns-nodefault-below-builtin-zone
+title:
+  en: "nodefault on a name below a built-in zone (1.168.192.in-addr.arpa.) gets the no such default local-zone warning"
+  ja: 組み込みゾーンの下の名前（1.168.192.in-addr.arpa.）に nodefault を書くと no such default local-zone の警告が出る
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "smallapp/unbound-checkconf.c nodefaultzonescheck() compares each nodefault name with COMPARE_ZONE_NAME, an exact case-insensitive match allowing only a trailing dot, against as112_zones, the special and reverse default lists and localhost."
+  ja: "smallapp/unbound-checkconf.c nodefaultzonescheck() は nodefault の名前を as112_zones、special と reverse の既定一覧、localhost. と COMPARE_ZONE_NAME で比べる。末尾のドットだけを許す大文字小文字を区別しない完全一致"
+manual:
+  en: "none (the man pages do not list what unbound-checkconf validates and what it does not)"
+  ja: "none（unbound-checkconf が何を検証し何を検証しないかの一覧が man にない）"
+layers:
+  en: ["checkconf extra checks"]
+  ja: ["checkconf の追加検査"]
+status: verified
+config: |
+  local-zone: "1.168.192.in-addr.arpa." nodefault
+command: unbound-checkconf
+expect:
+  exit: 0
+  stderr_contains: "'1.168.192.in-addr.arpa.' is configured as 'nodefault' but there is no such default local-zone"
+  note:
+    en: "Same warning as checkconf-warns-nodefault-without-builtin-zone. The built-in 168.192.in-addr.arpa. stays"
+    ja: "checkconf-warns-nodefault-without-builtin-zone と同じ警告。組み込みの 168.192.in-addr.arpa. は残る"

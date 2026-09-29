@@ -1,0 +1,34 @@
+id: local-zone-transparent-subzone-opens-static-parent
+title:
+  en: "A transparent subzone under a static zone sends its unknown names to normal resolution"
+  ja: static ゾーンの下の transparent のサブゾーンは、local-data にない名前を通常の名前解決に回す
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zones_tags_lookup() returns the closest enclosing zone, lab.home.arpa. (transparent), and local_zones_zone_answer() returns 0 for it, so the static parent home.arpa. is never consulted"
+  ja: "services/localzone.c local_zones_tags_lookup() は最も近いゾーン lab.home.arpa.（transparent）を返し、local_zones_zone_answer() はそこで 0 を返す。親の static の home.arpa. は参照されない"
+manual:
+  en: "none (the local-zone entry does not say which zone answers when zones are nested)"
+  ja: "none（local-zone の項は、ゾーンが入れ子のときにどれが答えるかを書いていない）"
+layers:
+  en: ["closest zone lookup", "answer generation per zone type"]
+  ja: ["最も近いゾーンの検索", "ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "home.arpa." static
+  local-data: "nas.home.arpa. A 192.168.1.10"
+  local-zone: "lab.home.arpa." transparent
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5502
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5502"
+  query: "pc.lab.home.arpa. A"
+  note:
+    en: "Under the static parent alone this name would get NXDOMAIN without leaving Unbound"
+    ja: "親の static だけなら、この名前は外へ出ずに NXDOMAIN になる"

@@ -1,0 +1,29 @@
+id: local-zone-static-missing-type-nodata
+title:
+  en: "A static zone answers NODATA when the name has local-data but not of the queried type"
+  ja: static ゾーンは名前が local-data にあり型がないとき NODATA を返す
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_data_answer() sets *ldp to the node for the name, local_data_find_type() finds no AAAA, and local_zones_zone_answer() for local_zone_static answers NOERROR because ld is set"
+  ja: "services/localzone.c local_data_answer() は名前のノードを *ldp に入れ、local_data_find_type() は AAAA を見つけない。local_zones_zone_answer() は local_zone_static で ld があるので NOERROR を返す"
+manual:
+  en: "doc/unbound.conf.5.in, static entry: Otherwise, the query is answered with NODATA or NXDOMAIN. (which of the two applies when is not stated)"
+  ja: "doc/unbound.conf.5.in static の項: Otherwise, the query is answered with NODATA or NXDOMAIN.（どちらがどの場合かは書いていない）"
+layers:
+  en: ["answer generation per zone type"]
+  ja: ["ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. AAAA"
+  rcode: "NOERROR"
+  answer_count: 0
+  note:
+    en: "Pairs with local-zone-static-unknown-name-nxdomain"
+    ja: "local-zone-static-unknown-name-nxdomain と対になる"

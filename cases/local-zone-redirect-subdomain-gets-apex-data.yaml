@@ -1,0 +1,30 @@
+id: local-zone-redirect-subdomain-gets-apex-data
+title:
+  en: "A redirect zone answers a name below the apex with the apex local-data, renamed to the query name"
+  ja: redirect ゾーンは頂点より下の名前に、頂点の local-data を問い合わせ名に置き換えて答える
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_data_answer() looks up z->name instead of the qname for local_zone_redirect, and before local_encode() sets r.rk.dname = qinfo->qname"
+  ja: "services/localzone.c local_data_answer() は local_zone_redirect では qname の代わりに z->name を探し、local_encode() の前に r.rk.dname = qinfo->qname とする"
+manual:
+  en: "doc/unbound.conf.5.in, redirect entry: This answers queries for the zone, and all subdomains of the zone with the local data for the zone. (the owner name of the answer is not stated)"
+  ja: "doc/unbound.conf.5.in redirect の項: This answers queries for the zone, and all subdomains of the zone with the local data for the zone.（応答の RR の名前は書いていない）"
+layers:
+  en: ["answer generation per zone type"]
+  ja: ["ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "example.com." redirect
+  local-data: "example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["www.example.com. 3600 IN A 192.0.2.1"]
+  answer_count: 1
+  note:
+    en: "The answer RR carries the query name, not example.com."
+    ja: "応答の RR の名前は example.com. ではなく問い合わせ名になる"

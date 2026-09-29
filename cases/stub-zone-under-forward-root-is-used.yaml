@@ -1,0 +1,34 @@
+id: stub-zone-under-forward-root-is-used
+title:
+  en: "A stub-zone written under forward-zone . is used for its names"
+  ja: forward-zone . の下に書いた stub-zone は、その配下の名前に使われる
+chapter: "6.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_fwd.c make_stub_holes() calls fwd_add_stub_hole() for each stub-zone, inserting an entry with no delegation point. forwards_lookup() returns NULL when the closest entry has no dp, so iterator/iterator.c forward_request() does not forward and processInitRequest() goes on to prime_stub()"
+  ja: "iterator/iter_fwd.c make_stub_holes() が stub-zone ごとに fwd_add_stub_hole() で委任点を持たない項目を入れる。forwards_lookup() は最も近い項目が dp を持たなければ NULL を返すので、iterator/iterator.c forward_request() は転送せず、processInitRequest() が prime_stub() へ進む"
+manual:
+  en: "none (neither the stub-zone nor the forward-zone section says how a stub-zone below a forward-zone is treated)"
+  ja: "none（stub-zone 節にも forward-zone 節にも、forward-zone の配下の stub-zone の扱いの記述がない）"
+layers:
+  en: ["stub hole in the forward tree", "stub lookup"]
+  ja: ["転送木の stub の穴", "stub の検索"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5607
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5608
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5608"
+  query: "www.example.com. A"
+  note:
+    en: "Contrast with forward-zone-beats-stub-zone-same-name: the hole is only punched when no forward-zone has exactly the stub's name"
+    ja: "forward-zone-beats-stub-zone-same-name と対照。穴が開くのは stub と同名の forward-zone が無いときだけ"

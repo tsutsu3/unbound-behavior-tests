@@ -1,0 +1,51 @@
+id: rpz-qname-trigger-beats-auth-zone-for-downstream
+title:
+  en: "An RPZ QNAME trigger answers before a for-downstream auth-zone for the same name"
+  ja: 同じ名前では、RPZ の QNAME トリガーが for-downstream の auth-zone より先に答える
+chapter: "4.5"
+category: undecided
+versions: ["1.26.0"]
+source:
+  en: "daemon/worker.c worker_handle_request() calls rpz_callback_from_worker_request() before auth_zones_downstream_answer(); services/rpz.c answers the Local Data action with the RR from the policy zone"
+  ja: "daemon/worker.c worker_handle_request() は auth_zones_downstream_answer() より前に rpz_callback_from_worker_request() を呼ぶ。services/rpz.c は Local Data の action をポリシーゾーンの RR で答える"
+manual:
+  en: "doc/unbound.conf.rst Response Policy Zone Options: RPZ QNAME triggers are applied after any local-zone and before any auth-zone."
+  ja: "doc/unbound.conf.rst Response Policy Zone Options: RPZ QNAME triggers are applied after any local-zone and before any auth-zone."
+layers:
+  en: ["RPZ before auth-zone"]
+  ja: ["auth-zone より前の RPZ"]
+status: verified
+config: |
+  module-config: "respip validator iterator"
+  rpz:
+    name: "rpz.local."
+    zonefile: "rpz.zone"
+  auth-zone:
+    name: "example.org."
+    zonefile: "example.org.zone"
+    for-downstream: yes
+    for-upstream: no
+files:
+  rpz.zone: |
+    $ORIGIN rpz.local.
+    $TTL 300
+    @ IN SOA ns.rpz.local. host.rpz.local. 1 3600 900 604800 300
+    @ IN NS ns.rpz.local.
+    www.example.org IN A 192.0.2.3
+  example.org.zone: |
+    $ORIGIN example.org.
+    $TTL 300
+    @ IN SOA ns.example.org. host.example.org. 1 3600 900 604800 300
+    @ IN NS ns.example.org.
+    ns IN A 192.0.2.53
+    www IN A 192.0.2.2
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.org. A"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ["192.0.2.3"]
+  note:
+    en: "Category undecided: the result matches the manual. 192.0.2.2 would come from the auth-zone"
+    ja: "分類 undecided: man の記述どおり。auth-zone が答えれば 192.0.2.2 になる"

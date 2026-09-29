@@ -1,0 +1,30 @@
+id: local-data-ptr-without-zone-enters-builtin-reverse
+title:
+  en: "local-data-ptr for a 192.168.0.0/16 address without a local-zone goes into the built-in 168.192.in-addr.arpa. zone and is answered"
+  ja: local-zone を書かない 192.168.0.0/16 の local-data-ptr は組み込みの 168.192.in-addr.arpa. ゾーンに入って答えられる
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/config_file.c cfg_ptr_reverse() turns local-data-ptr into a local-data PTR line. services/localzone.c lz_setup_implicit() runs after local_zone_enter_defaults() and finds 168.192.in-addr.arpa., so no implicit zone is made, and lz_enter_rr_str() enters the PTR there"
+  ja: "util/config_file.c cfg_ptr_reverse() が local-data-ptr を local-data の PTR の行にする。services/localzone.c lz_setup_implicit() は local_zone_enter_defaults() の後に走り 168.192.in-addr.arpa. を見つけるので暗黙ゾーンを作らず、lz_enter_rr_str() が PTR をそこへ入れる"
+manual:
+  en: "none (neither local-data-ptr nor the default zones say where such a PTR goes)"
+  ja: "none（local-data-ptr の項にも既定ゾーンの項にも、この PTR がどこに入るかは書いていない）"
+layers:
+  en: ["built-in zone registration order", "covering zone lookup for local-data"]
+  ja: ["組み込みゾーンの登録順", "local-data の被覆ゾーン検索"]
+status: verified
+config: |
+  verbosity: 4
+  local-data-ptr: "192.168.1.10 nas.home.arpa."
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "10.1.168.192.in-addr.arpa. PTR"
+  rcode: "NOERROR"
+  answer_contains: ["nas.home.arpa."]
+  stderr_contains: "using localzone 168.192.in-addr.arpa. static"
+  note:
+    en: "The rest of 168.192.in-addr.arpa. keeps answering NXDOMAIN"
+    ja: "168.192.in-addr.arpa. の残りは引き続き NXDOMAIN を返す"

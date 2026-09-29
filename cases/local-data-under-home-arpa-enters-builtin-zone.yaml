@@ -1,0 +1,30 @@
+id: local-data-under-home-arpa-enters-builtin-zone
+title:
+  en: "local-data under home.arpa. without a local-zone goes into the built-in static home.arpa. zone, not an implicit transparent one"
+  ja: local-zone を書かない home.arpa. の下の local-data は、暗黙の transparent ではなく組み込みの static の home.arpa. に入る
+chapter: "5.1"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zones_apply_cfg() calls local_zone_enter_defaults() before lz_setup_implicit(). lz_setup_implicit() finds the built-in home.arpa. with local_zones_lookup() and creates no zone, and lz_enter_rr_str() puts the RR into home.arpa. local_zones_answer() logs using localzone <name> <type> at verbosity 4"
+  ja: "services/localzone.c local_zones_apply_cfg() は local_zone_enter_defaults() の後に lz_setup_implicit() を呼ぶ。lz_setup_implicit() は local_zones_lookup() で組み込みの home.arpa. を見つけてゾーンを作らず、lz_enter_rr_str() が RR を home.arpa. に入れる。local_zones_answer() は verbosity 4 で using localzone <名前> <type> を出す"
+manual:
+  en: "none (the transparent entry says a transparent zone is created if no local-zone is given, but not that a default zone counts as given)"
+  ja: "none（transparent の項は local-zone がなければ transparent ゾーンが作られると書くが、組み込みゾーンがそれに数えられることは書いていない）"
+layers:
+  en: ["built-in zone registration order", "implicit zone creation"]
+  ja: ["組み込みゾーンの登録順", "暗黙ゾーン生成"]
+status: verified
+config: |
+  verbosity: 4
+  local-data: "nas.home.arpa. A 192.168.1.10"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "nas.home.arpa. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.168.1.10"]
+  stderr_contains: "using localzone home.arpa. static"
+  note:
+    en: "The zone that answered is the built-in home.arpa. with type static, so other names under home.arpa. get NXDOMAIN rather than being resolved"
+    ja: "答えたのは組み込みの home.arpa. で type は static。home.arpa. のほかの名前は解決に回らず NXDOMAIN になる"

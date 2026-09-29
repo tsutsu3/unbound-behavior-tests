@@ -1,0 +1,32 @@
+id: forward-addr-port-and-name-with-tls-uses-tcp-port
+title:
+  en: "addr@port#name with forward-tls-upstream: yes connects over TCP to that port"
+  ja: "forward-tls-upstream: yes と addr@port#name では、そのポートへ TCP で接続する"
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/net_help.c authextstrtoaddr() takes the port from @port. With ssl_upstream set, services/outside_network.c does not use UDP, and outnet_tcp_take_into_use() starts TLS and passes the auth name for certificate checking"
+  ja: "util/net_help.c authextstrtoaddr() がポートを @port から取る。ssl_upstream が立っていれば services/outside_network.c は UDP を使わず、outnet_tcp_take_into_use() が TLS を始めて名前を証明書の照合に渡す"
+manual:
+  en: "none (the forward-tls-upstream entry does not mention the port)"
+  ja: "none（forward-tls-upstream の項にポートの記述がない）"
+layers:
+  en: ["address parsing", "transport selection"]
+  ja: ["アドレス分解", "トランスポートの選択"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-tls-upstream: yes
+    forward-addr: "127.0.0.1@5611#example.com"
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: tcp
+    addr: "127.0.0.1:5611"
+  query: "example.com. A"
+  note:
+    en: "Only the TCP connection is observed, not the TLS handshake or the certificate check"
+    ja: "観測するのは TCP の接続だけで、TLS のハンドシェイクや証明書の照合は見ていない"

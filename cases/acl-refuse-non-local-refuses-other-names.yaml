@@ -1,0 +1,29 @@
+id: acl-refuse-non-local-refuses-other-names
+title:
+  en: "Under refuse_non_local a name that no local zone covers is refused before it reaches the cache or the iterator"
+  ja: refuse_non_local では、どの local zone にも入らない名前はキャッシュと iterator の前で REFUSED になる
+chapter: "4.5"
+category: undecided
+versions: ["1.26.0"]
+source:
+  en: "daemon/worker.c worker_handle_request(): after local_zones_answer() declines, deny_refuse_non_local() calls deny_refuse() with acl_refuse_non_local, which encodes REFUSED before answer_from_cache() and mesh_new_client()"
+  ja: "daemon/worker.c worker_handle_request(): local_zones_answer() が答えなかった後、deny_refuse_non_local() が acl_refuse_non_local で deny_refuse() を呼び、answer_from_cache() と mesh_new_client() より前に REFUSED を組み立てる"
+manual:
+  en: "doc/unbound.conf.rst access-control, refuse_non_local: Messages that are disallowed receive error code REFUSED."
+  ja: "doc/unbound.conf.rst access-control の refuse_non_local: Messages that are disallowed receive error code REFUSED."
+layers:
+  en: ["access control after local zones"]
+  ja: ["local zone の後のアクセス制御"]
+status: verified
+config: |
+  access-control: 127.0.0.1/32 refuse_non_local
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.net. A"
+  rcode: "REFUSED"
+  note:
+    en: "Category undecided: the result matches the manual. Control for acl-refuse-non-local-still-answers-local-data: it shows the refuse_non_local line is in effect for the querying address"
+    ja: "分類 undecided: man の記述どおり。acl-refuse-non-local-still-answers-local-data の対照で、問い合わせ元に refuse_non_local が当たっていることを示す"

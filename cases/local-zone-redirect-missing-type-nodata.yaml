@@ -1,0 +1,29 @@
+id: local-zone-redirect-missing-type-nodata
+title:
+  en: "A redirect zone answers NODATA for a type the apex has no local-data for"
+  ja: redirect ゾーンは頂点に local-data がない型に NODATA を返す
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_data_answer() finds the apex node but local_data_find_type() finds no AAAA and no CNAME, and local_zones_zone_answer() answers NOERROR for local_zone_redirect whether or not ld is set"
+  ja: "services/localzone.c local_data_answer() は頂点のノードを見つけるが、local_data_find_type() は AAAA も CNAME も見つけない。local_zones_zone_answer() は local_zone_redirect では ld の有無によらず NOERROR を返す"
+manual:
+  en: "none (the redirect entry does not say what is returned for a type not in the apex data)"
+  ja: "none（redirect の項は頂点のデータにない型に何を返すかを書いていない）"
+layers:
+  en: ["answer generation per zone type"]
+  ja: ["ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "example.com." redirect
+  local-data: "example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. AAAA"
+  rcode: "NOERROR"
+  answer_count: 0
+  note:
+    en: "The AAAA query does not go to normal resolution"
+    ja: "AAAA の問い合わせは通常の名前解決に回らない"

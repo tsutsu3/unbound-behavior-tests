@@ -1,0 +1,32 @@
+id: local-zone-transparent-private-reverse-subzone-forwards
+title:
+  en: "A transparent 1.168.192.in-addr.arpa. with a forward-zone of the same name sends PTR queries under it to the forwarder"
+  ja: 1.168.192.in-addr.arpa. を transparent にし同名の forward-zone を書くと、その下の PTR の問い合わせは転送先へ届く
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zones_tags_lookup() picks the closest zone 1.168.192.in-addr.arpa. (transparent), local_zones_zone_answer() returns 0 as there is no local-data, and the iterator uses the forward-zone"
+  ja: "services/localzone.c local_zones_tags_lookup() は最も近い 1.168.192.in-addr.arpa.（transparent）を選び、local-data がないので local_zones_zone_answer() は 0 を返し、iterator が forward-zone を使う"
+manual:
+  en: "doc/unbound.conf.5.in, nodefault entry: Use nodefault if you use exactly that zone, if you want to use a subzone, use transparent."
+  ja: "doc/unbound.conf.5.in nodefault の項: Use nodefault if you use exactly that zone, if you want to use a subzone, use transparent."
+layers:
+  en: ["closest zone lookup", "answer generation per zone type"]
+  ja: ["最も近いゾーンの検索", "ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "1.168.192.in-addr.arpa." transparent
+  forward-zone:
+    name: "1.168.192.in-addr.arpa."
+    forward-addr: 127.0.0.1@5504
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5504"
+  query: "10.1.168.192.in-addr.arpa. PTR"
+  note:
+    en: "The rest of 168.192.in-addr.arpa. stays with the built-in zone (local-zone-transparent-private-reverse-subzone-rest-nxdomain)"
+    ja: "168.192.in-addr.arpa. の残りは組み込みゾーンのまま（local-zone-transparent-private-reverse-subzone-rest-nxdomain）"

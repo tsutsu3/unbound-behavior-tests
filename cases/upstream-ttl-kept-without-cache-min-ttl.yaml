@@ -1,0 +1,39 @@
+id: upstream-ttl-kept-without-cache-min-ttl
+title:
+  en: "With the default cache-min-ttl (0) the TTL given by the authority reaches the client unchanged"
+  ja: cache-min-ttl が既定（0）なら、権威側が付けた TTL がそのままクライアントに届く
+chapter: "4.3"
+category: undecided
+versions: ["1.26.0"]
+source:
+  en: "util/data/msgreply.c rdata_copy(): with MIN_TTL 0 and MAX_TTL 86400 a TTL of 300 is left as it is. The harness has no authoritative server, so Unbound is made its own: queries it sends from outgoing-interface 127.0.0.2 come back to its own port, where access-control-view gives that source a view whose static local zone answers as the authority. The client (127.0.0.1) has no view, so its query misses the local zones and goes through the iterator to the stub-addr, and the reply is parsed like any upstream reply"
+  ja: "util/data/msgreply.c rdata_copy(): MIN_TTL が 0、MAX_TTL が 86400 なら TTL 300 はそのまま。ハーネスに権威 DNS サーバーがないので、Unbound 自身を権威役にする。outgoing-interface 127.0.0.2 から出した問い合わせは自分のポートに戻り、access-control-view がその送信元に view を与え、view の static ゾーンが権威として答える。問い合わせ元 127.0.0.1 には view がないので、local zone に当たらず iterator から stub-addr へ出て、応答は上流の応答と同じくパースされる"
+manual:
+  en: "doc/unbound.conf.rst cache-min-ttl: Zero makes sure the data in the cache is as the domain owner intended"
+  ja: "doc/unbound.conf.rst cache-min-ttl: Zero makes sure the data in the cache is as the domain owner intended"
+layers:
+  en: ["TTL clamping on reply parse"]
+  ja: ["応答パース時の TTL の丸め"]
+status: verified
+config: |
+  outgoing-interface: 127.0.0.2
+  access-control: 127.0.0.2/32 allow
+  access-control-view: 127.0.0.2/32 authview
+  view:
+    name: "authview"
+    local-zone: "example." static
+    local-data: "example. 86400 IN SOA ns.example. host.example. 1 7200 900 604800 86400"
+    local-data: "www.example. 300 IN A 192.0.2.1"
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@15353
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.0.2.1"]
+  answer_ttl: 300
+  note:
+    en: "Category undecided: matches the manual. Control for cache-min-ttl-raises-upstream-ttl, and a check that the self-as-authority setup works"
+    ja: "分類 undecided: man の記述どおり。cache-min-ttl-raises-upstream-ttl の対照で、自分を権威役にする構成が働くことの確認も兼ねる"

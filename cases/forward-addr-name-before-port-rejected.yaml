@@ -1,0 +1,28 @@
+id: forward-addr-name-before-port-rejected
+title:
+  en: "Writing #name before @port in forward-addr is rejected as an unparsable ip address"
+  ja: "forward-addr で #name を @port より前に書くと、ip address が解釈できないとして拒否される"
+chapter: "6.4"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "util/net_help.c authextstrtoaddr() looks for @ first and takes everything before it, here 127.0.0.1#example.com, as the address; ipstrtoaddr() cannot parse it and returns 0. iterator/iter_fwd.c read_fwds_addr() then logs cannot parse forward %s ip address, and smallapp/unbound-checkconf.c check_fwd() fails"
+  ja: "util/net_help.c authextstrtoaddr() は先に @ を探し、その手前の 127.0.0.1#example.com をアドレスとする。ipstrtoaddr() はこれを解釈できず 0 を返す。iterator/iter_fwd.c read_fwds_addr() が cannot parse forward %s ip address を出し、smallapp/unbound-checkconf.c check_fwd() が失敗する"
+manual:
+  en: "doc/unbound.conf.5.in, forward-addr entry: If you combine the '@' and '#', the '@' comes first."
+  ja: "doc/unbound.conf.5.in forward-addr の項: If you combine the '@' and '#', the '@' comes first."
+layers:
+  en: ["address parsing"]
+  ja: ["アドレス分解"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: "127.0.0.1#example.com@853"
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "cannot parse forward . ip address"
+  note:
+    en: "The order rule in the man page is enforced, but the message speaks of the ip address, not of the order of @ and #"
+    ja: "man の順序の規則どおり拒否されるが、メッセージは @ と # の順ではなく ip address の解釈失敗を言う"

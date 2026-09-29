@@ -1,0 +1,33 @@
+id: local-zone-transparent-unknown-name-resolved
+title:
+  en: "A transparent zone sends a name that has no local-data on to normal resolution"
+  ja: transparent ゾーンは local-data にない名前を通常の名前解決に回す
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zones_zone_answer() for local_zone_transparent returns 0 when ld is NULL, so local_zones_answer() returns 0 and daemon/worker.c worker_handle_request() goes on to the cache and the mesh, where the forward-zone is used"
+  ja: "services/localzone.c local_zones_zone_answer() は local_zone_transparent で ld が NULL なら 0 を返す。local_zones_answer() も 0 を返し、daemon/worker.c worker_handle_request() はキャッシュと mesh へ進み、forward-zone が使われる"
+manual:
+  en: "doc/unbound.conf.5.in, transparent entry: Otherwise if the query has a different name, the query is resolved normally."
+  ja: "doc/unbound.conf.5.in transparent の項: Otherwise if the query has a different name, the query is resolved normally."
+layers:
+  en: ["answer generation per zone type"]
+  ja: ["ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "example.com." transparent
+  local-data: "intra.example.com. A 192.168.1.20"
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5501
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5501"
+  query: "www.example.com. A"
+  note:
+    en: "The query leaves Unbound although example.com. is a local zone"
+    ja: "example.com. はローカルゾーンだが、問い合わせは Unbound の外へ出る"

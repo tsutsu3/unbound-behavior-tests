@@ -1,0 +1,31 @@
+id: forward-zone-duplicate-logged-by-checkconf
+title:
+  en: "unbound-checkconf prints duplicate forward zone . ignored. for two forward-zone clauses with the same name, yet exits 0"
+  ja: 同名の forward-zone を 2 つ書くと、unbound-checkconf は duplicate forward zone . ignored. を出しつつ終了コード 0 で終わる
+chapter: "6.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "smallapp/unbound-checkconf.c check_fwd() calls forwards_apply_cfg(). iterator/iter_fwd.c forwards_insert_data() logs duplicate forward zone %s ignored. with log_err() but returns 1, so check_fwd() does not fail"
+  ja: "smallapp/unbound-checkconf.c check_fwd() が forwards_apply_cfg() を呼ぶ。iterator/iter_fwd.c forwards_insert_data() は log_err() で duplicate forward zone %s ignored. を出すが 1 を返すので、check_fwd() は失敗しない"
+manual:
+  en: "none (the forward-zone section does not say what happens when a name is repeated)"
+  ja: "none（forward-zone 節に、同じ name を 2 回書いたときの扱いの記述がない）"
+layers:
+  en: ["duplicate handling at forward zone registration", "checkconf verdict"]
+  ja: ["転送ゾーン登録時の重複処理", "checkconf の判定"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5603
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5604
+command: unbound-checkconf
+expect:
+  exit: 0
+  stderr_contains: "duplicate forward zone . ignored."
+  note:
+    en: "An error line with exit code 0: a script that looks only at the exit code misses it"
+    ja: "エラーの行が出るのに終了コードは 0。終了コードだけを見るスクリプトでは気付かない"

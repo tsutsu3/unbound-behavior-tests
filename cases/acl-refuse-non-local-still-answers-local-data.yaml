@@ -1,0 +1,30 @@
+id: acl-refuse-non-local-still-answers-local-data
+title:
+  en: "A client under refuse_non_local still gets local-data: the local-zone answer comes before the non_local check"
+  ja: refuse_non_local の問い合わせ元にも local-data は答える。local-zone の応答が non_local の判定より先に来る
+chapter: "4.5"
+category: undecided
+versions: ["1.26.0"]
+source:
+  en: "daemon/worker.c worker_handle_request() calls local_zones_answer() and jumps to send_reply when it answers; deny_refuse_non_local() is called only after local_zones_answer(), rpz_callback_from_worker_request() and auth_zones_downstream_answer() have all declined"
+  ja: "daemon/worker.c worker_handle_request() は local_zones_answer() が答えれば send_reply へ飛ぶ。deny_refuse_non_local() を呼ぶのは local_zones_answer()、rpz_callback_from_worker_request()、auth_zones_downstream_answer() がいずれも答えなかった後"
+manual:
+  en: "doc/unbound.conf.rst access-control, refuse_non_local: The refuse_non_local action is for hosts that are only allowed to query for the authoritative local-data, they are not allowed full recursion but only the static data. Messages that are disallowed receive error code REFUSED."
+  ja: "doc/unbound.conf.rst access-control の refuse_non_local: The refuse_non_local action is for hosts that are only allowed to query for the authoritative local-data, they are not allowed full recursion but only the static data. Messages that are disallowed receive error code REFUSED."
+layers:
+  en: ["access control after local zones"]
+  ja: ["local zone の後のアクセス制御"]
+status: verified
+config: |
+  access-control: 127.0.0.1/32 refuse_non_local
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.0.2.1"]
+  note:
+    en: "Category undecided: the result matches the manual, so none of A to D applies. The case fixes the order of the two stages together with acl-refuse-non-local-refuses-other-names. The 127.0.0.1/32 entry is more specific than the harness's 127.0.0.0/8 allow, so it is the one that applies"
+    ja: "分類 undecided: man の記述どおりで A〜D のどれにも当たらない。acl-refuse-non-local-refuses-other-names と組で2つの段の順序を固定する。127.0.0.1/32 はハーネスの 127.0.0.0/8 allow より具体的なので、こちらが当たる"

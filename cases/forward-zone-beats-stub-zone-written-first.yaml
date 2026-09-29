@@ -1,0 +1,34 @@
+id: forward-zone-beats-stub-zone-written-first
+title:
+  en: "A stub-zone written before a forward-zone with the same name still loses to the forward-zone"
+  ja: 同名の forward-zone より先に stub-zone を書いても forward-zone が勝つ
+chapter: "6.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_fwd.c forwards_apply_cfg() calls read_forwards() before make_stub_holes(), so the forward zone is already in the tree when the stub hole is considered, whatever order the clauses were written in. iterator/iterator.c processInitRequest() tries forward_request() before the stub lookup"
+  ja: "iterator/iter_fwd.c forwards_apply_cfg() は read_forwards() の後に make_stub_holes() を呼ぶので、節を書いた順に関係なく、stub の穴を開ける時点で転送ゾーンはすでに木にある。iterator/iterator.c processInitRequest() は stub の検索より先に forward_request() を試す"
+manual:
+  en: "none (neither the stub-zone nor the forward-zone section says which one is used when both have the same name)"
+  ja: "none（stub-zone 節にも forward-zone 節にも、同じ name を両方に書いたときにどちらが使われるかの記述がない）"
+layers:
+  en: ["forward lookup before stub lookup", "stub hole skipped for an existing forward zone"]
+  ja: ["stub より先の転送判定", "既存の転送ゾーンに対する stub の穴あけの省略"]
+status: verified
+config: |
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5412
+  forward-zone:
+    name: "example.com."
+    forward-addr: 127.0.0.1@5413
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5413"
+  query: "www.example.com. A"
+  note:
+    en: "The mirror of forward-zone-beats-stub-zone-same-name with the clauses swapped. The order of the clauses does not decide the winner"
+    ja: "forward-zone-beats-stub-zone-same-name の節の順を入れ替えたもの。節の順は勝ち負けを決めない"

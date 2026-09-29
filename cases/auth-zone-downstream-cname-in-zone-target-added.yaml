@@ -1,0 +1,48 @@
+id: auth-zone-downstream-cname-in-zone-target-added
+title:
+  en: "With for-downstream: yes, a CNAME whose target is in the same auth-zone is answered together with the target's data"
+  ja: "for-downstream: yes でも、ターゲットが同じ auth-zone にある CNAME はターゲットのデータと一緒に返る"
+chapter: "6.3"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "services/authzone.c az_generate_cname_answer() adds the CNAME and calls follow_cname_chain(), which adds the target only while it is inside the same zone (dname_subdomain_c(target, z->name)) and stops at a target outside it. daemon/worker.c worker_handle_request() sends the auth_zones_downstream_answer() result straight back without passing it to the iterator"
+  ja: "services/authzone.c az_generate_cname_answer() は CNAME を入れて follow_cname_chain() を呼び、follow_cname_chain() はターゲットが同じゾーンの中にある間だけ（dname_subdomain_c(target, z->name)）ターゲットを足し、ゾーンの外で止まる。daemon/worker.c worker_handle_request() は auth_zones_downstream_answer() の結果を iterator に渡さずそのまま返す"
+manual:
+  en: "doc/unbound.conf.5.in, Authority Zone Options: A notable example, in this case, is CNAME records which are returned verbatim to downstream clients without further resolution."
+  ja: "doc/unbound.conf.5.in Authority Zone Options 節: A notable example, in this case, is CNAME records which are returned verbatim to downstream clients without further resolution."
+layers:
+  en: ["in-zone CNAME chain in the auth answer"]
+  ja: ["auth の応答内での同一ゾーンの CNAME の連鎖"]
+status: verified
+config: |
+  auth-zone:
+    name: "example.org."
+    zonefile: "example.org.zone"
+  auth-zone:
+    name: "example.net."
+    zonefile: "example.net.zone"
+files:
+  example.org.zone: |
+    $ORIGIN example.org.
+    @      3600 IN SOA ns.example.org. host.example.org. 1 3600 600 86400 300
+    @      3600 IN NS  ns.example.org.
+    ns     3600 IN A   192.0.2.1
+    alias  3600 IN CNAME ns.example.org.
+    www    3600 IN CNAME www.example.net.
+  example.net.zone: |
+    $ORIGIN example.net.
+    @      3600 IN SOA ns.example.net. host.example.net. 1 3600 600 86400 300
+    @      3600 IN NS  ns.example.net.
+    ns     3600 IN A   192.0.2.2
+    www    3600 IN A   192.0.2.80
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "alias.example.org. A"
+  rcode: "NOERROR"
+  answer_count: 2
+  answer_contains: ["CNAME ns.example.org.", "192.0.2.1"]
+  note:
+    en: "returned verbatim without further resolution reads as the CNAME alone, but a target inside the same zone is added, as an authoritative server would. Only a target outside the zone is left unresolved (auth-zone-downstream-cname-out-of-zone-not-chased)"
+    ja: "returned verbatim without further resolution は CNAME だけが返るように読めるが、同じゾーンの中のターゲットは権威 DNS サーバーと同じく付け加えられる。解決されないのはゾーンの外のターゲットだけ（auth-zone-downstream-cname-out-of-zone-not-chased）"

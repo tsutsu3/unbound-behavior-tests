@@ -1,0 +1,31 @@
+id: forward-host-circular-dependency-warning
+title:
+  en: "A forward-host under the forward-zone's own name logs a circular dependency warning at startup"
+  ja: forward-zone 自身の名前の配下を forward-host に書くと、起動時に循環依存の警告が出る
+chapter: "6.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_fwd.c read_fwds_host() calls log_warn(\"forward-host '%s' may have a circular dependency on forward-zone '%s'\") when dname_subdomain_c(dname, dp->name) holds. With name \".\" every host name is a subdomain. daemon/daemon.c daemon_fork() calls forwards_apply_cfg() after logging is set up"
+  ja: "iterator/iter_fwd.c read_fwds_host() は dname_subdomain_c(dname, dp->name) が真なら log_warn(\"forward-host '%s' may have a circular dependency on forward-zone '%s'\") を出す。name が \".\" ならどのホスト名も配下になる。daemon/daemon.c daemon_fork() はログの設定後に forwards_apply_cfg() を呼ぶ"
+manual:
+  en: "doc/unbound.conf.5.in, forward-host entry: If the domain (or a subdomain) from this zone is used as the host, it will unavoidably introduce a circular dependency on retrieving the IP addresses of the name server. (nothing about a log message)"
+  ja: "doc/unbound.conf.5.in forward-host の項: If the domain (or a subdomain) from this zone is used as the host, it will unavoidably introduce a circular dependency on retrieving the IP addresses of the name server.（ログを出すことの記述はない）"
+layers:
+  en: ["forward zone loading"]
+  ja: ["転送ゾーンの読み込み"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-host: "ns.example."
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "localhost. A"
+  rcode: "NOERROR"
+  answer_contains: ["127.0.0.1"]
+  stderr_contains: "forward-host 'ns.example.' may have a circular dependency on forward-zone '.'"
+  note:
+    en: "The query goes to the built-in localhost. zone only so that the daemon answers and its log can be read; the warning is written while the config is loaded, before any query. It is a warning, not an error: the daemon starts"
+    ja: "組み込みの localhost. を問い合わせるのは、応答を得てログを読むためだけ。警告は問い合わせより前、設定の読み込み時に出る。エラーではなく警告なので daemon は起動する"

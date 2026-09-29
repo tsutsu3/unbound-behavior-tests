@@ -1,0 +1,32 @@
+id: forward-zone-private-reverse-reached-after-nodefault
+title:
+  en: "After nodefault removes the built-in 168.192.in-addr.arpa. zone, its forward-zone is reached"
+  ja: nodefault で組み込みの 168.192.in-addr.arpa. を外すと、その forward-zone に問い合わせが届く
+chapter: "6.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configparser.y server_local_zone puts nodefault into cfg->local_zones_nodefault. services/localzone.c local_zone_enter_defaults() adds the AS112 zones from util/as112.c as112_zone_array through add_empty_default(), which skips a zone when lz_nodefault() matches. With no local zone answering, the query reaches the iterator and forward_request()"
+  ja: "util/configparser.y server_local_zone が nodefault を cfg->local_zones_nodefault に入れる。services/localzone.c local_zone_enter_defaults() は util/as112.c as112_zone_array の AS112 ゾーンを add_empty_default() で入れ、add_empty_default() は lz_nodefault() に当たるゾーンを飛ばす。答えるローカルゾーンが無いので問い合わせは iterator の forward_request() に届く"
+manual:
+  en: "doc/unbound.conf.5.in, nodefault entry: Used to turn off default contents for AS112 zones. The other types also turn off default contents for the zone."
+  ja: "doc/unbound.conf.5.in nodefault の項: Used to turn off default contents for AS112 zones. The other types also turn off default contents for the zone."
+layers:
+  en: ["suppression of built-in zones", "forwarding destination selection"]
+  ja: ["組み込みゾーンの抑止", "転送先の選択"]
+status: verified
+config: |
+  local-zone: "168.192.in-addr.arpa." nodefault
+  forward-zone:
+    name: "168.192.in-addr.arpa."
+    forward-addr: 127.0.0.1@5612
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5612"
+  query: "1.1.168.192.in-addr.arpa. PTR"
+  note:
+    en: "The fix for forward-zone-private-reverse-shadowed-by-builtin. Whether domain-insecure or insecure-lan-zones is also needed once a trust anchor is set is not observed here"
+    ja: "forward-zone-private-reverse-shadowed-by-builtin の対処。信頼アンカーを設定したときに domain-insecure や insecure-lan-zones も要るかはここでは見ていない"

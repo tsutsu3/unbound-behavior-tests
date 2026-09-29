@@ -1,0 +1,34 @@
+id: forward-zone-duplicate-logged-by-daemon
+title:
+  en: "The daemon logs duplicate forward zone . ignored. for two forward-zone clauses with the same name, and keeps running"
+  ja: 同名の forward-zone を 2 つ書くと、daemon は duplicate forward zone . ignored. を出して動き続ける
+chapter: "6.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_fwd.c forwards_insert_data() calls log_err(\"duplicate forward zone %s ignored.\") when rbtree_insert() fails, frees the new node and still returns 1, so forwards_apply_cfg() succeeds. daemon/daemon.c daemon_fork() calls forwards_apply_cfg()"
+  ja: "iterator/iter_fwd.c forwards_insert_data() は rbtree_insert() が失敗すると log_err(\"duplicate forward zone %s ignored.\") を出し、新しい方を捨てて 1 を返すので forwards_apply_cfg() は成功する。daemon/daemon.c daemon_fork() が forwards_apply_cfg() を呼ぶ"
+manual:
+  en: "none (the forward-zone section does not say what happens when a name is repeated)"
+  ja: "none（forward-zone 節に、同じ name を 2 回書いたときの扱いの記述がない）"
+layers:
+  en: ["duplicate handling at forward zone registration"]
+  ja: ["転送ゾーン登録時の重複処理"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5603
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5604
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "localhost. A"
+  rcode: "NOERROR"
+  answer_contains: ["127.0.0.1"]
+  stderr_contains: "duplicate forward zone . ignored."
+  note:
+    en: "The message is logged as an error but startup is not stopped. The clause it calls ignored is the one written first (forward-zone-duplicate-last-wins), which the message does not show"
+    ja: "エラーとして出るが起動は止まらない。ignored とされるのは先に書いた節（forward-zone-duplicate-last-wins）で、メッセージからはそれが分からない"

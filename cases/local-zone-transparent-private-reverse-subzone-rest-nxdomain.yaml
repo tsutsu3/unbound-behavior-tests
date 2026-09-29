@@ -1,0 +1,30 @@
+id: local-zone-transparent-private-reverse-subzone-rest-nxdomain
+title:
+  en: "With a transparent 1.168.192.in-addr.arpa., the built-in 168.192.in-addr.arpa. still answers NXDOMAIN for 2.168.192.in-addr.arpa. and below"
+  ja: 1.168.192.in-addr.arpa. を transparent にしても、2.168.192.in-addr.arpa. の下には組み込みの 168.192.in-addr.arpa. が NXDOMAIN を返す
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c lz_exists() is exact, so add_empty_default() still enters 168.192.in-addr.arpa. local_zones_tags_lookup() picks it for 1.2.168.192.in-addr.arpa. and local_zones_zone_answer() answers NXDOMAIN"
+  ja: "services/localzone.c lz_exists() は完全一致なので、add_empty_default() は 168.192.in-addr.arpa. を入れる。1.2.168.192.in-addr.arpa. には local_zones_tags_lookup() がそれを選び、local_zones_zone_answer() が NXDOMAIN を返す"
+manual:
+  en: "doc/unbound.conf.5.in, nodefault entry: Use nodefault if you use exactly that zone, if you want to use a subzone, use transparent. (what happens to the rest of the zone is not stated)"
+  ja: "doc/unbound.conf.5.in nodefault の項: Use nodefault if you use exactly that zone, if you want to use a subzone, use transparent.（ゾーンの残りがどうなるかは書いていない）"
+layers:
+  en: ["built-in zone registration", "closest zone lookup"]
+  ja: ["組み込みゾーンの登録", "最も近いゾーンの検索"]
+status: verified
+config: |
+  local-zone: "1.168.192.in-addr.arpa." transparent
+  forward-zone:
+    name: "1.168.192.in-addr.arpa."
+    forward-addr: 127.0.0.1@5505
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "1.2.168.192.in-addr.arpa. PTR"
+  rcode: "NXDOMAIN"
+  note:
+    en: "No forward-zone covers this name, and the built-in zone answers before normal resolution"
+    ja: "この名前を覆う forward-zone はなく、組み込みゾーンが通常の名前解決より先に答える"

@@ -1,0 +1,34 @@
+id: forward-zone-closest-name-wins
+title:
+  en: "With forward-zone clauses for . and corp.example., a name under corp.example. goes to the corp.example. forwarder"
+  ja: . と corp.example. の forward-zone を並べると、corp.example. 配下の名前は corp.example. の転送先へ行く
+chapter: "6.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_fwd.c forwards_lookup() finds the closest enclosing forward zone with rbtree_find_less_equal() and walks up the parent pointers set by fwd_init_parents(), so the deepest zone covering the name is used. iterator/iterator.c forward_request() takes the delegation point from it"
+  ja: "iterator/iter_fwd.c forwards_lookup() が rbtree_find_less_equal() と fwd_init_parents() が張った親ポインタで、名前を覆う最も深い転送ゾーンを選ぶ。iterator/iterator.c forward_request() はその委任点を使う"
+manual:
+  en: "none (the Forward Zone Options section does not say which forward-zone is used when several cover a name; the closest-match rule is written only for auth-zone: The authority zone with the name closest to the name looked up is used.)"
+  ja: "none（Forward Zone Options 節に、複数の forward-zone が名前を覆うときどれを使うかの記述がない。最も近いものという規則は auth-zone の節にだけある: The authority zone with the name closest to the name looked up is used.）"
+layers:
+  en: ["forward zone lookup"]
+  ja: ["転送ゾーンの検索"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5601
+  forward-zone:
+    name: "corp.example."
+    forward-addr: 127.0.0.1@5602
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5602"
+  query: "www.corp.example. A"
+  note:
+    en: "The order of the clauses does not matter here, unlike duplicates of the same name (forward-zone-duplicate-last-wins). Names outside corp.example. still go to the . clause"
+    ja: "同名の重複（forward-zone-duplicate-last-wins）と違い、節の順は関係しない。corp.example. の外の名前は . の節へ行く"

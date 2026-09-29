@@ -1,0 +1,29 @@
+id: local-zone-own-home-arpa-drops-builtin-soa
+title:
+  en: "Writing local-zone home.arpa. yourself drops the built-in SOA and NS of home.arpa."
+  ja: 自分で local-zone home.arpa. を書くと、組み込みの home.arpa. の SOA と NS は入らない
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zones_apply_cfg() runs lz_enter_zones() before local_zone_enter_defaults(), and add_empty_default() returns early when lz_exists() finds home.arpa. The apex node exists as an empty non-terminal created by lz_find_create_node(), so a static zone answers NOERROR with no records"
+  ja: "services/localzone.c local_zones_apply_cfg() は lz_enter_zones() を local_zone_enter_defaults() より先に呼び、add_empty_default() は lz_exists() が home.arpa. を見つけると何も入れずに戻る。頂点のノードは lz_find_create_node() が作る空の中間ノードとして存在するので、static は NOERROR でレコードなしを返す"
+manual:
+  en: "doc/unbound.conf.5.in, default zones: The defaults can be turned off by specifying your own local-zone of that name, or using the nodefault type."
+  ja: "doc/unbound.conf.5.in 既定ゾーン: The defaults can be turned off by specifying your own local-zone of that name, or using the nodefault type."
+layers:
+  en: ["built-in zone registration order"]
+  ja: ["組み込みゾーンの登録順"]
+status: verified
+config: |
+  local-zone: "home.arpa." static
+  local-data: "nas.home.arpa. A 192.168.1.10"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "home.arpa. SOA"
+  rcode: "NOERROR"
+  answer_count: 0
+  note:
+    en: "With the built-in zone the same query returns the SOA with nobody.invalid. (see local-zone-builtin-test-zone-answers-locally for test.)"
+    ja: "組み込みゾーンなら同じ問い合わせに nobody.invalid. の SOA が返る（test. については local-zone-builtin-test-zone-answers-locally）"

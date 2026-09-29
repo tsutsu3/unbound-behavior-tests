@@ -1,0 +1,29 @@
+id: local-zone-static-unknown-name-nxdomain
+title:
+  en: "A static zone answers NXDOMAIN for a name that has no local-data"
+  ja: static ゾーンは local-data にない名前に NXDOMAIN を返す
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_data_answer() finds no local_data node, so ld stays NULL. local_zones_zone_answer() for local_zone_static then uses rcode = ld ? NOERROR : NXDOMAIN"
+  ja: "services/localzone.c local_data_answer() が local_data のノードを見つけず ld は NULL のまま。local_zones_zone_answer() は local_zone_static で rcode = ld ? NOERROR : NXDOMAIN とする"
+manual:
+  en: "doc/unbound.conf.5.in, static entry: Otherwise, the query is answered with NODATA or NXDOMAIN. (which of the two applies when is not stated)"
+  ja: "doc/unbound.conf.5.in static の項: Otherwise, the query is answered with NODATA or NXDOMAIN.（どちらがどの場合かは書いていない）"
+layers:
+  en: ["answer generation per zone type"]
+  ja: ["ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "other.example.com. A"
+  rcode: "NXDOMAIN"
+  answer_count: 0
+  note:
+    en: "Nothing is sent to an outside server"
+    ja: "外部には問い合わせない"

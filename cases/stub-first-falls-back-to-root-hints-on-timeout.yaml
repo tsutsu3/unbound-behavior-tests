@@ -1,0 +1,38 @@
+id: stub-first-falls-back-to-root-hints-on-timeout
+title:
+  en: "With stub-first: yes, a stub server that never answers makes Unbound go to the root hints"
+  ja: "stub-first: yes では、stub-zone の相手が応答しないと Unbound はルートヒントのサーバーへ問い合わせる"
+chapter: "6.3"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_hints.c read_stubs() sets dp->has_parent_side_NS = !s->isfirst. When the stub targets are exhausted, iterator/iterator.c processLastResort() passes can_have_last_resort() only without has_parent_side_NS, then sets refetch_glue and restarts at INIT_REQUEST; processInitRequest() strips one label (com.), finds no delegation or stub, and calls prime_root(), which queries the root hints"
+  ja: "iterator/iter_hints.c read_stubs() が dp->has_parent_side_NS = !s->isfirst を設定する。stub の宛先を使い切ると iterator/iterator.c processLastResort() は has_parent_side_NS が無いときだけ can_have_last_resort() を通り、refetch_glue を立てて INIT_REQUEST からやり直す。processInitRequest() は 1 ラベル落とした com. に委任も stub も見つけず prime_root() を呼び、ルートヒントへ問い合わせる"
+manual:
+  en: "doc/unbound.conf.5.in, stub-first entry: If enabled, a query is attempted without this stub section if it fails. The data could not be retrieved and would have caused SERVFAIL because the servers are unreachable, instead it is tried without this stub section."
+  ja: "doc/unbound.conf.5.in stub-first の項: If enabled, a query is attempted without this stub section if it fails. The data could not be retrieved and would have caused SERVFAIL because the servers are unreachable, instead it is tried without this stub section."
+layers:
+  en: ["target exhaustion", "last resort decision", "root priming"]
+  ja: ["宛先の使い切り", "最後の手段の判定", "ルートのプライミング"]
+status: verified
+config: |
+  infra-cache-max-rtt: 1000
+  root-hints: "root.hints"
+  stub-zone:
+    name: "example.com."
+    stub-first: yes
+    stub-addr: 127.0.0.1@5606
+files:
+  root.hints: |
+    .                    3600000 NS A.ROOT-SERVERS.NET.
+    A.ROOT-SERVERS.NET.  3600000 A  127.0.0.2
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.2:53"
+  query: "www.example.com. A"
+  note:
+    en: "infra-cache-max-rtt: 1000 only shortens how long the unanswered server is retried (about 12 s with the default in a first run, beyond the runner's wait); the fallback happened with the default as well. As the man page says, but for a zone that exists only inside a network this means the internal name is asked of the internet root servers once the internal server is unreachable"
+    ja: "infra-cache-max-rtt: 1000 は応答しないサーバーを見限るまでの時間を縮めるためだけに入れた（既定値では最初の実行で約 12 秒かかり、ランナーの待ち時間を超えた。既定値でもフォールバックは起きた）。man のとおりだが、内部にしかないゾーンでは、内部のサーバーに届かなくなった時点で内部の名前がインターネットのルートサーバーへ問い合わされることになる"

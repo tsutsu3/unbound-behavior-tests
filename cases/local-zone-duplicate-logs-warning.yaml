@@ -1,0 +1,29 @@
+id: local-zone-duplicate-logs-warning
+title:
+  en: "Unbound logs duplicate local-zone at startup for two local-zone lines with the same name"
+  ja: 同じ名前の local-zone を2行書くと、起動した Unbound が duplicate local-zone の警告をログに出す
+chapter: "5.6"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c lz_enter_zone_dname() does log_warn(\"duplicate local-zone %s\") when rbtree_insert() fails, and returns the zone already entered (the one written last)"
+  ja: "services/localzone.c lz_enter_zone_dname() は rbtree_insert() が失敗すると log_warn(\"duplicate local-zone %s\") を出し、先に入ったゾーン（最後に書いた行）を返す"
+manual:
+  en: "none (the man page says nothing about duplicate local-zone)"
+  ja: "none（重複 local-zone に関する記述が man にない）"
+layers:
+  en: ["duplicate handling at zone registration"]
+  ja: ["ゾーン登録時の重複処理"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-zone: "example.com." refuse
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. A"
+  rcode: "REFUSED"
+  stderr_contains: "duplicate local-zone example.com."
+  note:
+    en: "The configuration of local-zone-duplicate-last-line-wins, with the log checked"
+    ja: "local-zone-duplicate-last-line-wins と同じ設定で、ログも確かめたもの"

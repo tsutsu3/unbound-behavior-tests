@@ -1,0 +1,41 @@
+id: acl-refuse-non-local-still-answers-auth-zone
+title:
+  en: "A client under refuse_non_local also gets answers from an auth-zone with for-downstream: yes"
+  ja: "refuse_non_local の問い合わせ元にも、for-downstream: yes の auth-zone は答える"
+chapter: "4.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "daemon/worker.c worker_handle_request() calls auth_zones_downstream_answer() before deny_refuse_non_local(); when the auth-zone answers, only the RA bit is withheld for deny_non_local / refuse_non_local clients"
+  ja: "daemon/worker.c worker_handle_request() は deny_refuse_non_local() より前に auth_zones_downstream_answer() を呼ぶ。auth-zone が答えた場合、deny_non_local / refuse_non_local の問い合わせ元には RA を立てないだけ"
+manual:
+  en: "none (refuse_non_local mentions only local-data; the auth-zone section says for-downstream zones are processed after local-zones and before cache, but not how they relate to access-control)"
+  ja: "none（refuse_non_local の項は local-data にしか触れない。auth-zone の節は for-downstream のゾーンを local-zone の後、キャッシュの前に処理すると書くが、access-control との関係は書いていない）"
+layers:
+  en: ["access control after local zones"]
+  ja: ["local zone の後のアクセス制御"]
+status: verified
+config: |
+  access-control: 127.0.0.1/32 refuse_non_local
+  auth-zone:
+    name: "example.org."
+    zonefile: "example.org.zone"
+    for-downstream: yes
+    for-upstream: no
+files:
+  example.org.zone: |
+    $ORIGIN example.org.
+    $TTL 300
+    @ IN SOA ns.example.org. host.example.org. 1 3600 900 604800 300
+    @ IN NS ns.example.org.
+    ns IN A 192.0.2.53
+    www IN A 192.0.2.2
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.org. A"
+  rcode: "NOERROR"
+  answer_contains: ["192.0.2.2"]
+  note:
+    en: "The for-downstream auth-zone sits between the local zones and the non_local check"
+    ja: "for-downstream の auth-zone は local zone と non_local の判定の間にある"

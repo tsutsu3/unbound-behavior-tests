@@ -1,0 +1,32 @@
+id: local-zone-nodefault-private-reverse-forwards
+title:
+  en: "With nodefault on 168.192.in-addr.arpa., a forward-zone of the same name receives the PTR query"
+  ja: 168.192.in-addr.arpa. に nodefault を書くと、同名の forward-zone に PTR の問い合わせが届く
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c add_empty_default() skips 168.192.in-addr.arpa. from util/as112.c as112_zone_array when lz_nodefault() matches, so no local zone covers the name and daemon/worker.c passes the query to the iterator, which uses the forward-zone"
+  ja: "services/localzone.c add_empty_default() は lz_nodefault() が一致すると util/as112.c as112_zone_array の 168.192.in-addr.arpa. を入れない。名前を覆うローカルゾーンがないので daemon/worker.c は問い合わせを iterator に渡し、forward-zone が使われる"
+manual:
+  en: "doc/unbound.conf.5.in, nodefault entry: Used to turn off default contents for AS112 zones."
+  ja: "doc/unbound.conf.5.in nodefault の項: Used to turn off default contents for AS112 zones."
+layers:
+  en: ["nodefault handling", "local zone answer before iteration"]
+  ja: ["nodefault の処理", "反復解決より前の local zone の応答"]
+status: verified
+config: |
+  local-zone: "168.192.in-addr.arpa." nodefault
+  forward-zone:
+    name: "168.192.in-addr.arpa."
+    forward-addr: 127.0.0.1@5503
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.1:5503"
+  query: "10.1.168.192.in-addr.arpa. PTR"
+  note:
+    en: "The fix for forward-zone-private-reverse-shadowed-by-builtin"
+    ja: "forward-zone-private-reverse-shadowed-by-builtin の直し方"

@@ -1,0 +1,38 @@
+id: forward-first-falls-back-to-root-hints-on-timeout
+title:
+  en: "With forward-first: yes, a forwarder that never answers makes Unbound send the query to the root hints"
+  ja: "forward-first: yes では、転送先が応答しないと Unbound はルートヒントのサーバーへ問い合わせる"
+chapter: "6.2"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_fwd.c read_forwards() sets dp->has_parent_side_NS = !s->isfirst. When every target has failed, iterator/iterator.c processQueryTargets() calls processLastResort(); can_have_last_resort() refuses only when the forward zone has has_parent_side_NS set. For the root forward zone processLastResort() copies the root hints into the delegation point and clears BIT_RD. A timeout exhausts the targets just as a SERVFAIL reply does"
+  ja: "iterator/iter_fwd.c read_forwards() が dp->has_parent_side_NS = !s->isfirst を設定する。すべての宛先が失敗すると iterator/iterator.c processQueryTargets() が processLastResort() を呼び、can_have_last_resort() が拒否するのは転送ゾーンの has_parent_side_NS が立っているときだけ。ルートの転送ゾーンなら processLastResort() がルートヒントを委任点へ写し BIT_RD を落とす。宛先を使い切る点ではタイムアウトも SERVFAIL の応答と同じ"
+manual:
+  en: "doc/unbound.conf.5.in, forward-first entry: If a forwarded query is met with a SERVFAIL error and this option is enabled Unbound will fall back to less specific resolution. (no mention of a forwarder that does not answer)"
+  ja: "doc/unbound.conf.5.in forward-first の項: If a forwarded query is met with a SERVFAIL error and this option is enabled Unbound will fall back to less specific resolution.（応答しない転送先についての記述はない）"
+layers:
+  en: ["target exhaustion", "last resort decision", "root hints"]
+  ja: ["宛先の使い切り", "最後の手段の判定", "ルートヒント"]
+status: verified
+config: |
+  infra-cache-max-rtt: 1000
+  root-hints: "root.hints"
+  forward-zone:
+    name: "."
+    forward-first: yes
+    forward-addr: 127.0.0.1@5605
+files:
+  root.hints: |
+    .                    3600000 NS A.ROOT-SERVERS.NET.
+    A.ROOT-SERVERS.NET.  3600000 A  127.0.0.2
+command: run-and-observe
+expect:
+  checkconf_exit: 0
+  listen:
+    proto: udp
+    addr: "127.0.0.2:53"
+  query: "example.com. A"
+  note:
+    en: "infra-cache-max-rtt: 1000 only shortens how long the unanswered server is retried (about 12 s with the default in a first run, beyond the runner's wait); the fallback happened with the default as well. Nothing listens on 127.0.0.1@5605, so the forwarder only times out; no SERVFAIL reply is ever received, yet the fallback happens. Without forward-first, can_have_last_resort() refuses and the query ends in SERVFAIL without reaching the root hints (source only; the runner cannot observe that nothing arrives)"
+    ja: "infra-cache-max-rtt: 1000 は応答しないサーバーを見限るまでの時間を縮めるためだけに入れた（既定値では最初の実行で約 12 秒かかり、ランナーの待ち時間を超えた。既定値でもフォールバックは起きた）。127.0.0.1@5605 では何も待ち受けないので、転送先はタイムアウトするだけで SERVFAIL の応答は一度も返らないが、フォールバックは起きる。forward-first が無ければ can_have_last_resort() が拒否し、ルートヒントへ届かずに SERVFAIL で終わる（ソースのみ。何も届かないことはランナーで観測できない）"
