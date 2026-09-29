@@ -1,7 +1,7 @@
 id: local-zone-implicit-transparent-at-shared-suffix
 title:
-  en: "local-data without a local-zone creates one transparent zone at the shortest common parent domain"
-  ja: "local-zone を書かない local-data は「共通する最短の上位ドメイン」1 つに transparent ゾーンを作る"
+  en: "local-data without a local-zone creates one transparent zone at the closest common parent domain (the longest shared suffix)"
+  ja: "local-zone を書かない local-data は「共通する上位ドメインのうち最も長いもの」1 つに transparent ゾーンを作る"
 chapter: "5.3"
 category: B
 versions: ["1.26.0"]

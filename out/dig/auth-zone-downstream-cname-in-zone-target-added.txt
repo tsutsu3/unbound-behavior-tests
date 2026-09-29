@@ -1,0 +1,13 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 38499
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;alias.example.org.		IN	A
+
+;; ANSWER SECTION:
+alias.example.org.	3600	IN	CNAME	ns.example.org.
+ns.example.org.		3600	IN	A	192.0.2.1
+

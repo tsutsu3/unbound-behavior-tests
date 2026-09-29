@@ -1,0 +1,38 @@
+id: private-address-removes-forwarded-a
+title:
+  en: "private-address removes a matching A record from a forwarder's answer, leaving NOERROR with an empty answer"
+  ja: private-address は転送先の答えから該当する A を取り除き、NOERROR で ANSWER が空になる
+chapter: "6.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_scrub.c scrub_message() -> scrub_sanitize() calls priv_rrset_bad() for every RRset, forwarded or not, and removes RRsets with an address in private-address"
+  ja: "iterator/iter_scrub.c scrub_message() → scrub_sanitize() は、転送かどうかに関係なく各 RRset に priv_rrset_bad() をかけ、private-address のアドレスを含む RRset を取り除く"
+manual:
+  en: "none (private-address says such addresses are not allowed to be returned for public internet names, but not what the client receives)"
+  ja: "none（private-address の項は公開の名前にそのアドレスを返させないと書くが、クライアントが受け取る応答の形は書いていない）"
+layers:
+  en: ["response scrubbing"]
+  ja: ["応答の洗浄"]
+status: verified
+config: |
+  private-address: 192.168.0.0/16
+  forward-zone:
+    name: "corp.example."
+    forward-addr: 127.0.0.1@5626
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5626"
+      replies:
+        - qname: "host.corp.example."
+          qtype: A
+          answer: ["host.corp.example. 300 IN A 192.168.1.10"]
+      received_contains: ["host.corp.example. A"]
+  query: "host.corp.example. A"
+  rcode: "NOERROR"
+  answer_count: 0
+  note:
+    en: "No trust anchor is configured in the harness, so validation plays no part here. private-domain-keeps-forwarded-a is the same setup with private-domain"
+    ja: "ハーネスには信頼アンカーがないので、検証はここでは関わらない。private-domain-keeps-forwarded-a は同じ構成に private-domain を足したもの"

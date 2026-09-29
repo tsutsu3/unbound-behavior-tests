@@ -1,0 +1,43 @@
+id: forward-zone-beats-stub-zone-silently
+title:
+  en: "When a forward-zone and a stub-zone share a name, the stub server gets nothing and no warning is logged"
+  ja: 同名の forward-zone と stub-zone では、stub の相手には何も届かず、警告も出ない
+chapter: "6.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_fwd.c make_stub_holes() skips a stub whose name is already a forward zone (comment: Already a forward zone there.) without logging, and forward_request() runs before prime_stub()"
+  ja: "iterator/iter_fwd.c make_stub_holes() は forward zone と同名の stub を、ログを出さずに飛ばす（コメント: Already a forward zone there.）。forward_request() は prime_stub() より先に走る"
+manual:
+  en: "none"
+  ja: "none"
+layers:
+  en: ["forward/stub hole making", "forward decision before stub priming"]
+  ja: ["forward と stub の穴開け", "stub のプライミングより前の転送判定"]
+status: verified
+config: |
+  verbosity: 2
+  so-sndbuf: 0
+  forward-zone:
+    name: "example.com."
+    forward-addr: 127.0.0.1@5624
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5625
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5624"
+      replies:
+        - qname: "www.example.com."
+          answer: ["www.example.com. 300 IN A 192.0.2.15"]
+      received_contains: ["www.example.com. A"]
+    - addr: "127.0.0.1:5625"
+      received_none: true
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  stderr_not_contains: "warning"
+  note:
+    en: "verbosity: 2 so that a warning, if any, would be in the log. so-sndbuf: 0 removes an unrelated warning the container prints about the send buffer size. forward-zone-beats-stub-zone-same-name observes only that the forwarder is reached; this case also shows the stub server is never used"
+    ja: "警告があればログに出るよう verbosity: 2 にした。so-sndbuf: 0 は、コンテナで出る送信バッファの大きさについての無関係な警告を消すため。forward-zone-beats-stub-zone-same-name は転送先に届くことだけを見る。このケースは stub の相手が使われないことも示す"

@@ -1,0 +1,29 @@
+id: checkconf-silent-on-forward-zone-shadowed-by-builtin
+title:
+  en: "unbound-checkconf prints no warning for a forward-zone that a built-in zone shadows"
+  ja: 組み込みゾーンに隠される forward-zone に、unbound-checkconf は警告を出さない
+chapter: "5.6"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "smallapp/unbound-checkconf.c checkconf() runs localzonechecks() and the forward/stub checks (fwd_ptr_check and the like), but nothing compares forward-zone names against the built-in zone list. The only built-in-zone warning is for local-zone nodefault / transparent names that match no built-in zone"
+  ja: "smallapp/unbound-checkconf.c checkconf() は localzonechecks() と転送・スタブの検査を行うが、forward-zone の名前を組み込みゾーンの一覧と突き合わせる処理はない。組み込みゾーンについての警告は、組み込みゾーンにない名前への local-zone nodefault / transparent に出すものだけ"
+manual:
+  en: "none"
+  ja: "none"
+layers:
+  en: ["checkconf checks"]
+  ja: ["checkconf の検査"]
+status: verified
+config: |
+  forward-zone:
+    name: "168.192.in-addr.arpa."
+    forward-addr: 192.168.1.1
+command: unbound-checkconf
+expect:
+  exit: 0
+  stderr_contains: "unbound-checkconf: no errors in unbound.conf"
+  stderr_not_contains: "warning"
+  note:
+    en: "The config of forward-zone-private-reverse-shadowed-by-builtin with a router-like forward-addr. With 127.0.0.1 instead, checkconf would warn about do-not-query-localhost (its default is yes; the harness boilerplate sets it to no). No warning is printed about the built-in zone"
+    ja: "forward-zone-private-reverse-shadowed-by-builtin の設定で、forward-addr をルーターのようなアドレスにしたもの。127.0.0.1 にすると、do-not-query-localhost（既定は yes。ハーネスの定型部は no にしている）についての警告が出る。組み込みゾーンについての警告は出ない"

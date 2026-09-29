@@ -1,0 +1,41 @@
+id: forward-referral-not-followed
+title:
+  en: "A referral returned by a forwarder is not followed; nothing is sent to the delegated server"
+  ja: 転送先が委任応答を返しても Unbound はたどらず、委任先へは何も送らない
+chapter: "6.1"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c processQueryResponse(): if type == RESPONSE_TYPE_REFERRAL and iq->chase_flags has BIT_RD (forwarding) and it is not an auth-zone response, the type is changed to RESPONSE_TYPE_ANSWER, with the comment: No queries should be sent elsewhere"
+  ja: "iterator/iterator.c processQueryResponse() は、type が RESPONSE_TYPE_REFERRAL で iq->chase_flags に BIT_RD（転送）があり auth-zone の応答でなければ、type を RESPONSE_TYPE_ANSWER に変える。コメントは No queries should be sent elsewhere"
+manual:
+  en: "none"
+  ja: "none"
+layers:
+  en: ["response classification when forwarding"]
+  ja: ["転送時の応答の分類"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5622
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5622"
+      replies:
+        - qname: "www.sub.example.com."
+          authority: ["sub.example.com. 300 IN NS ns.sub.example.com."]
+          additional: ["ns.sub.example.com. 300 IN A 127.0.0.3"]
+      received_contains: ["www.sub.example.com. A"]
+    - addr: "127.0.0.3:53"
+      replies:
+        - qname: "www.sub.example.com."
+          aa: true
+          answer: ["www.sub.example.com. 300 IN A 192.0.2.13"]
+      received_none: true
+  query: "www.sub.example.com. A"
+  note:
+    en: "RFC 1034 4.3.1 says a recursive server never returns referrals; this is what Unbound does when one does anyway"
+    ja: "RFC 1034 4.3.1 は再帰サーバーが委任応答を返さないとする。それでも返されたときの Unbound の扱い"

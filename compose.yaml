@@ -3,6 +3,7 @@
 #   docker compose run --rm tests            run every case
 #   docker compose run --rm tests -k <id>    run a single case
 #   docker compose run --rm gen              regenerate the tables in out/
+#   docker compose run --rm dig              write dig output to out/dig/
 #   docker compose run --rm lint             ruff check .
 #   docker compose run --rm shell            poke around inside the container
 #
@@ -44,6 +45,16 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     entrypoint: ["python"]
     command: ["gen.py"]
+
+  # Runs the run-and-dig cases again and writes dig's output for each to
+  # out/dig/<id>.txt, for the book to include.  Like gen it writes on the
+  # host, so it runs as the host user; only run-and-dig cases are collected
+  # with --dig-out, and those need no privileged port.
+  dig:
+    <<: *base
+    user: "${UID:-1000}:${GID:-1000}"
+    entrypoint: ["pytest"]
+    command: ["-q", "-p", "no:cacheprovider", "--dig-out", "out/dig"]
 
   # Ruff.  --fix and format rewrite files on the host, so like gen it runs as
   # the host user.

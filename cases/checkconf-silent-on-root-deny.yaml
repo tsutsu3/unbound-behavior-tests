@@ -1,0 +1,27 @@
+id: checkconf-silent-on-root-deny
+title:
+  en: "unbound-checkconf prints no warning for local-zone: \".\" deny"
+  ja: "local-zone: \".\" deny に、unbound-checkconf は警告を出さない"
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "smallapp/unbound-checkconf.c: the only local-zone warning is nodefaultzonescheck(), which looks at local_zones_nodefault only. localzonechecks() enters the zones with local_zones_apply_cfg() and reports nothing unless that fails"
+  ja: "smallapp/unbound-checkconf.c で local-zone について警告を出すのは nodefaultzonescheck() だけで、見るのは local_zones_nodefault だけ。localzonechecks() は local_zones_apply_cfg() でゾーンを登録し、失敗しない限り何も出さない"
+manual:
+  en: "none"
+  ja: "none"
+layers:
+  en: ["checkconf checks"]
+  ja: ["checkconf の検査"]
+status: verified
+config: |
+  local-zone: "." deny
+command: unbound-checkconf
+expect:
+  exit: 0
+  stderr_contains: "unbound-checkconf: no errors in unbound.conf"
+  stderr_not_contains: "warning"
+  note:
+    en: "The same config as local-zone-root-deny-keeps-builtin-zones. The runner searches stdout and stderr together for warning"
+    ja: "local-zone-root-deny-keeps-builtin-zones と同じ設定。ランナーは標準出力と標準エラー出力をまとめて warning を探す"

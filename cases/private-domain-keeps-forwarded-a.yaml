@@ -1,0 +1,39 @@
+id: private-domain-keeps-forwarded-a
+title:
+  en: "private-domain lets a private-address record under that name through"
+  ja: private-domain の名前の下では、private-address に当たる A も取り除かれない
+chapter: "6.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_priv.c priv_rrset_bad() returns early when the owner name is under a private-domain (priv_lookup_name())"
+  ja: "iterator/iter_priv.c priv_rrset_bad() は、RR の名前が private-domain の下にあれば（priv_lookup_name()）除去しない"
+manual:
+  en: "doc/unbound.conf.5.in, private-domain: Allow this domain, and all its subdomains to contain private addresses."
+  ja: "doc/unbound.conf.5.in private-domain の項: Allow this domain, and all its subdomains to contain private addresses."
+layers:
+  en: ["response scrubbing"]
+  ja: ["応答の洗浄"]
+status: verified
+config: |
+  private-address: 192.168.0.0/16
+  private-domain: "corp.example."
+  forward-zone:
+    name: "corp.example."
+    forward-addr: 127.0.0.1@5627
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5627"
+      replies:
+        - qname: "host.corp.example."
+          qtype: A
+          answer: ["host.corp.example. 300 IN A 192.168.1.10"]
+      received_contains: ["host.corp.example. A"]
+  query: "host.corp.example. A"
+  rcode: "NOERROR"
+  answer_contains: ["host.corp.example. 300 IN A 192.168.1.10"]
+  note:
+    en: "Compare private-address-removes-forwarded-a"
+    ja: "private-address-removes-forwarded-a と比べる"

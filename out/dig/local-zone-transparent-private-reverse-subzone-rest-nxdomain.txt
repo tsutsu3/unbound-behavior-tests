@@ -1,0 +1,12 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 47219
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;1.2.168.192.in-addr.arpa.	IN	PTR
+
+;; AUTHORITY SECTION:
+168.192.in-addr.arpa.	10800	IN	SOA	localhost. nobody.invalid. 1 3600 1200 604800 10800
+

@@ -1,0 +1,12 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 48108
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;nas.home.arpa.			IN	A
+
+;; ANSWER SECTION:
+nas.home.arpa.		300	IN	A	192.168.1.10
+

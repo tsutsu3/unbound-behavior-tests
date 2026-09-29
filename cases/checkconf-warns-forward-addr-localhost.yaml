@@ -1,0 +1,29 @@
+id: checkconf-warns-forward-addr-localhost
+title:
+  en: "unbound-checkconf warns, but passes, a 127.0.0.1 forward-addr when do-not-query-localhost is yes"
+  ja: "do-not-query-localhost が yes のとき、127.0.0.1 の forward-addr に unbound-checkconf は警告を出すが通す"
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "smallapp/unbound-checkconf.c donotquerylocalhostcheck() prints the warning for each localhost forward-addr and stub-addr when cfg->donotquery_localhost is set, without failing"
+  ja: "smallapp/unbound-checkconf.c donotquerylocalhostcheck() は cfg->donotquery_localhost のとき、localhost の forward-addr と stub-addr ごとに警告を出し、失敗にはしない"
+manual:
+  en: "none"
+  ja: "none"
+layers:
+  en: ["checkconf checks"]
+  ja: ["checkconf の検査"]
+status: verified
+config: |
+  do-not-query-localhost: yes
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5628
+command: unbound-checkconf
+expect:
+  exit: 0
+  stderr_contains: "but do-not-query-localhost: yes means that the address will not be used for lookups"
+  note:
+    en: "The runtime side is forward-addr-localhost-unused-by-default"
+    ja: "実行時の側は forward-addr-localhost-unused-by-default"

@@ -1,0 +1,30 @@
+id: local-zone-always-null-answers-from-local-data
+title:
+  en: "always_null answers from local-data when the name and type match, despite the manual saying it ignores local data"
+  ja: always_null は、名前と型が一致する local-data があるとそれで答える。man は local data を無視すると書く
+chapter: "5.3"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zones_answer() skips local_data_answer() only for always_refuse, always_transparent, block_a, block_aaaa, always_nxdomain, always_nodata and always_deny. always_null is not in that list, so a matching local-data answers before local_zones_zone_answer() reaches the always_null branch"
+  ja: "services/localzone.c local_zones_answer() が local_data_answer() を飛ばすのは always_refuse / always_transparent / block_a / block_aaaa / always_nxdomain / always_nodata / always_deny だけ。always_null はこの一覧にないので、一致する local-data があれば local_zones_zone_answer() の always_null の分岐より先にそれで答える"
+manual:
+  en: "doc/unbound.conf.5.in, always_null entry: Always returns 0.0.0.0 or ::0 for every name in the zone. Like redirect with zero data for A and AAAA. Ignores local data in the zone."
+  ja: "doc/unbound.conf.5.in always_null の項: Always returns 0.0.0.0 or ::0 for every name in the zone. Like redirect with zero data for A and AAAA. Ignores local data in the zone."
+layers:
+  en: ["whether local-data is consulted", "answer generation per zone type"]
+  ja: ["local-data 参照の可否判定", "ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "example.com." always_null
+  local-data: "example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. A"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ["example.com. 3600 IN A 192.0.2.1"]
+  note:
+    en: "Names and types without local-data still get 0.0.0.0 / ::0"
+    ja: "local-data のない名前と型には、これまでどおり 0.0.0.0 / ::0 が返る"

@@ -1,0 +1,29 @@
+id: local-zone-builtin-reverse-nxdomain-authority-has-soa
+title:
+  en: "An NXDOMAIN from a built-in private reverse zone carries its nobody.invalid. SOA in AUTHORITY, with TTL 10800"
+  ja: 組み込みのプライベートアドレスの逆引きゾーンの NXDOMAIN は、AUTHORITY に nobody.invalid. の SOA を TTL 10800 で入れる
+chapter: "5.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/as112.c as112_zone_array has 168.192.in-addr.arpa., entered by services/localzone.c add_empty_default() with \"<name> 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800\". lz_mark_soa_for_zone() makes soa_negative with TTL min(10800, 10800), and local_zones_zone_answer() encodes it with the NXDOMAIN rcode"
+  ja: "util/as112.c as112_zone_array に 168.192.in-addr.arpa. があり、services/localzone.c add_empty_default() が \"<name> 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800\" を入れる。lz_mark_soa_for_zone() は TTL を min(10800, 10800) にした soa_negative を作り、local_zones_zone_answer() がそれを NXDOMAIN の rcode で応答に入れる"
+manual:
+  en: "none (the default zone list shows the SOA, but not that an NXDOMAIN carries it, nor its TTL there)"
+  ja: "none（既定ゾーンの一覧は SOA を示すが、NXDOMAIN にそれが入ることと、そのときの TTL は書いていない）"
+layers:
+  en: ["built-in zone registration", "negative answer SOA"]
+  ja: ["組み込みゾーンの登録", "否定の応答の SOA"]
+status: verified
+config: |
+  # no local-zone and no local-data
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "1.1.168.192.in-addr.arpa. PTR"
+  rcode: "NXDOMAIN"
+  answer_count: 0
+  authority_contains: ["168.192.in-addr.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"]
+  note:
+    en: "The same SOA as the special-use zones; the zone apex is the /16 reverse zone, not the queried name"
+    ja: "特別用途のゾーンと同じ SOA が入る。SOA の名前は問い合わせた名前ではなく /16 の逆引きゾーンの頂点"

@@ -1,0 +1,12 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 41658
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;home.arpa.			IN	SOA
+
+;; ANSWER SECTION:
+home.arpa.		10800	IN	SOA	localhost. nobody.invalid. 1 3600 1200 604800 10800
+

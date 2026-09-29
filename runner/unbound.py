@@ -8,9 +8,12 @@ is everything on the Unbound side of the wire:
   own text and its `files:` land on disk,
 * running `unbound-checkconf`,
 * running and stopping `unbound -d`, and collecting its stderr,
-* sending the case's `query` to it.
+* sending the case's `query` to it, with dnspython for the checks and with
+  `dig` for the output the book includes,
+* pointing the system stub resolver at it and running `getent ahosts`.
 """
 
+import contextlib
 import dataclasses
 import os
 import pathlib
@@ -30,6 +33,12 @@ import dns.rdatatype
 #: it; only the upstream ports they care about are fixed by the case.
 UNBOUND_PORT = 15353
 UNBOUND_ADDR = "127.0.0.1"
+
+#: Port used instead by run-and-resolve.  The stub resolver in glibc reads
+#: `nameserver` lines from /etc/resolv.conf, which carry an address but no
+#: port, so Unbound has to be on 53 for `getent` to reach it.
+STUB_PORT = 53
+RESOLV_CONF = pathlib.Path("/etc/resolv.conf")
 
 CHECKCONF = os.environ.get("UNBOUND_CHECKCONF", "unbound-checkconf")
 UNBOUND = os.environ.get("UNBOUND", "unbound")
@@ -62,14 +71,14 @@ server:
 """
 
 
-def build_config(case_config: str) -> str:
+def build_config(case_config: str, port: int = UNBOUND_PORT) -> str:
     """Boilerplate first, then the case verbatim.
 
     The case text is appended rather than merged, so a case may either add
     `server:` options (they land in the boilerplate's server clause) or open
     its own top level clause such as `forward-zone:`.
     """
-    body = BOILERPLATE.format(addr=UNBOUND_ADDR, port=UNBOUND_PORT)
+    body = BOILERPLATE.format(addr=UNBOUND_ADDR, port=port)
     return (
         body + case_config if case_config.endswith("\n") else body + case_config + "\n"
     )
@@ -79,6 +88,7 @@ def write_config(
     tmpdir: pathlib.Path,
     case_config: str,
     files: dict[str, str] | None = None,
+    port: int = UNBOUND_PORT,
 ) -> pathlib.Path:
     """Write the generated config, plus any extra files the case declared.
 
@@ -94,7 +104,7 @@ def write_config(
         extra.parent.mkdir(parents=True, exist_ok=True)
         extra.write_text(content, encoding="utf-8")
     path = tmpdir / "unbound.conf"
-    path.write_text(build_config(case_config), encoding="utf-8")
+    path.write_text(build_config(case_config, port), encoding="utf-8")
     return path
 
 
@@ -120,8 +130,9 @@ def run_checkconf(conf: pathlib.Path) -> Run:
 class UnboundProcess:
     """Run `unbound -d` in the foreground and collect its stderr."""
 
-    def __init__(self, conf: pathlib.Path):
+    def __init__(self, conf: pathlib.Path, port: int = UNBOUND_PORT):
         self.conf = conf
+        self.port = port
         self.proc: subprocess.Popen | None = None
         self._err: list[str] = []
         self._thread: threading.Thread | None = None
@@ -174,7 +185,7 @@ class UnboundProcess:
             if self.proc.poll() is not None:
                 return False
             try:
-                dns.query.udp(probe, UNBOUND_ADDR, port=UNBOUND_PORT, timeout=0.5)
+                dns.query.udp(probe, UNBOUND_ADDR, port=self.port, timeout=0.5)
                 return True
             except (OSError, dns.exception.DNSException):
                 # Not up yet: the port is refused, or the query times out.
@@ -201,3 +212,54 @@ def send_query(spec: str, timeout: float = 3.0) -> dns.message.Message | None:
         # replies, so this times out by design.  The caller decides whether
         # that matters.
         return None
+
+
+#: `dig` options for the output the book includes.  +nocmd drops the banner
+#: that names the dig version and the harness's port; +nostats drops the
+#: query time, the date and the server line.  Everything else is dig's
+#: default output, so it is what a reader who runs
+#: `dig @127.0.0.1 <name> <type>` sees, apart from the message id.
+DIG_OPTIONS = ("+nocmd", "+nostats")
+
+
+def dig_text(spec: str, port: int = UNBOUND_PORT) -> str:
+    """Run `dig` against the daemon and return its output unchanged."""
+    name, rrtype = parse_query(spec)
+    p = subprocess.run(
+        ["dig", f"@{UNBOUND_ADDR}", "-p", str(port), *DIG_OPTIONS, name, rrtype],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    return p.stdout
+
+
+@contextlib.contextmanager
+def stub_resolver_pointed_at_unbound():
+    """Point glibc's stub resolver at the daemon, and put it back afterwards.
+
+    Only the container's own /etc/resolv.conf is touched.  attempts:1 keeps
+    a failing lookup from retrying for half a minute.
+    """
+    saved = RESOLV_CONF.read_text(encoding="utf-8")
+    RESOLV_CONF.write_text(
+        f"nameserver {UNBOUND_ADDR}\noptions attempts:1 timeout:2\n",
+        encoding="utf-8",
+    )
+    try:
+        yield
+    finally:
+        RESOLV_CONF.write_text(saved, encoding="utf-8")
+
+
+def getent_ahosts(name: str) -> Run:
+    """`getent ahosts <name>`: getaddrinfo() through glibc's stub resolver."""
+    p = subprocess.run(
+        ["getent", "ahosts", name],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    return Run(p.returncode, p.stdout, p.stderr)

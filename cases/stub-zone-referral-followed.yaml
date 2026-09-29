@@ -1,0 +1,45 @@
+id: stub-zone-referral-followed
+title:
+  en: "A referral returned by a stub-zone's server is followed to the delegated server"
+  ja: stub-zone の相手が委任応答を返すと、Unbound はその委任先へ問い合わせる
+chapter: "6.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c processQueryResponse(): the query to a stub server has no BIT_RD in chase_flags, so a RESPONSE_TYPE_REFERRAL is kept and the iterator moves to the delegated servers (compare forward-referral-not-followed)"
+  ja: "iterator/iterator.c processQueryResponse() では、stub の相手への問い合わせの chase_flags に BIT_RD がないので、RESPONSE_TYPE_REFERRAL のまま委任先へ進む（forward-referral-not-followed と比べる）"
+manual:
+  en: "none (Stub Zone Options says the servers are authority servers, but not how their referrals are handled)"
+  ja: "none（Stub Zone Options は相手が権威サーバーだと書くが、その委任応答の扱いは書いていない）"
+layers:
+  en: ["response classification when not forwarding"]
+  ja: ["転送でないときの応答の分類"]
+status: verified
+config: |
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5629
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5629"
+      replies:
+        - qname: "sub.example.com."
+          authority: ["sub.example.com. 300 IN NS ns.sub.example.com."]
+          additional: ["ns.sub.example.com. 300 IN A 127.0.0.3"]
+        - qname: "www.sub.example.com."
+          authority: ["sub.example.com. 300 IN NS ns.sub.example.com."]
+          additional: ["ns.sub.example.com. 300 IN A 127.0.0.3"]
+      received_rd: false
+    - addr: "127.0.0.3:53"
+      replies:
+        - qname: "www.sub.example.com."
+          qtype: A
+          aa: true
+          answer: ["www.sub.example.com. 300 IN A 192.0.2.17"]
+      received_contains: ["www.sub.example.com. A"]
+  query: "www.sub.example.com. A"
+  note:
+    en: "The same referral as forward-referral-not-followed, sent by a stub server instead of a forwarder. With QNAME minimisation (on by default) the stub server first sees sub.example.com. A, hence the second rule. The client side is not checked: the iterator also asks the delegated server for ns.sub.example.com., which this fake server does not answer, so the client reply can time out"
+    ja: "forward-referral-not-followed と同じ委任応答を、転送先ではなく stub の相手が返す。QNAME minimisation（既定で有効）のため、stub の相手には先に sub.example.com. A が届くので、規則を2つ置いた。クライアント側は判定しない。iterator は委任先に ns.sub.example.com. も問い合わせ、この偽の相手はそれに答えないので、クライアントへの応答が時間切れになりうる"

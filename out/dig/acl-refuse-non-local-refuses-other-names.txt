@@ -1,0 +1,5 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 62407
+;; flags: qr rd; QUERY: 0, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; WARNING: recursion requested but not available
+

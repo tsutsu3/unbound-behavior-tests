@@ -1,0 +1,30 @@
+id: stub-zone-private-reverse-shadowed-by-builtin
+title:
+  en: "A stub-zone for a private reverse zone is never used: the built-in AS112 zone answers first"
+  ja: プライベートアドレスの逆引きゾーンに stub-zone を書いても、組み込みの AS112 ゾーンが先に答えて使われない
+chapter: "5.5"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "util/as112.c as112_zone_array contains 168.192.in-addr.arpa., entered as a static zone by services/localzone.c local_zone_enter_defaults(). daemon/worker.c worker_handle_request() calls local_zones_answer() before mesh_new_client(), so the static zone answers NXDOMAIN and the stub-zone is never looked up"
+  ja: "util/as112.c as112_zone_array に 168.192.in-addr.arpa. があり、services/localzone.c local_zone_enter_defaults() が static ゾーンとして入れる。daemon/worker.c worker_handle_request() は mesh_new_client() より前に local_zones_answer() を呼ぶので、static ゾーンが NXDOMAIN を返し、stub-zone は参照されない"
+manual:
+  en: "doc/unbound.conf.5.in, Stub Zone Options: Consider adding server: statements for domain-insecure: and for local-zone: <name> nodefault for the zone if it is a locally served zone. ... The local-zone: nodefault (or transparent) option makes the (reverse-) zone bypass Unbound's filtering of RFC 1918 zones."
+  ja: "doc/unbound.conf.5.in Stub Zone Options: Consider adding server: statements for domain-insecure: and for local-zone: <name> nodefault for the zone if it is a locally served zone. ... The local-zone: nodefault (or transparent) option makes the (reverse-) zone bypass Unbound's filtering of RFC 1918 zones."
+layers:
+  en: ["local zone answer before iteration", "built-in zone registration"]
+  ja: ["反復解決より前の local zone の応答", "組み込みゾーンの登録"]
+status: verified
+config: |
+  stub-zone:
+    name: "168.192.in-addr.arpa."
+    stub-addr: 127.0.0.1@5415
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "1.1.168.192.in-addr.arpa. PTR"
+  rcode: "NXDOMAIN"
+  answer_count: 0
+  note:
+    en: "The stub-zone counterpart of forward-zone-private-reverse-shadowed-by-builtin. The manual does tell stub-zone users to add nodefault, but only as a suggestion (Consider adding), so it is easy to skip. Had the query reached the stub, the unanswered stub-addr would have made it SERVFAIL, not NXDOMAIN"
+    ja: "forward-zone-private-reverse-shadowed-by-builtin の stub-zone 版。man は stub-zone について nodefault を足すよう書いているが、Consider adding という提案の形なので読み飛ばしやすい。stub に届いていれば、応答しない stub-addr のせいで NXDOMAIN ではなく SERVFAIL になる"

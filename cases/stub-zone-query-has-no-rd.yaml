@@ -1,0 +1,39 @@
+id: stub-zone-query-has-no-rd
+title:
+  en: "Queries sent to a stub-zone's server do not carry the RD bit"
+  ja: stub-zone の相手へ送る問い合わせには RD が立たない
+chapter: "6.1"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c processInitRequest3() clears BIT_RD from iq->chase_flags when the query is not forwarded; prime_stub() only supplies the delegation point"
+  ja: "iterator/iterator.c processInitRequest3() は転送でない問い合わせの iq->chase_flags から BIT_RD を落とす。prime_stub() は委任点を与えるだけ"
+manual:
+  en: "none (Stub Zone Options says the servers are authority servers, but not which flags are sent)"
+  ja: "none（Stub Zone Options は相手が権威サーバーだと書くが、送るフラグは書いていない）"
+layers:
+  en: ["delegation point from stub", "outgoing query flags"]
+  ja: ["stub による委任点", "送出する問い合わせのフラグ"]
+status: verified
+config: |
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5621
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5621"
+      replies:
+        - qname: "www.example.com."
+          qtype: A
+          aa: true
+          answer: ["www.example.com. 300 IN A 192.0.2.11"]
+      received_contains: ["www.example.com. A"]
+      received_rd: false
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["www.example.com. 300 IN A 192.0.2.11"]
+  note:
+    en: "Compare forward-zone-query-carries-rd. stub-prime is left at its default (no), so no NS query comes first"
+    ja: "forward-zone-query-carries-rd と比べる。stub-prime は既定（no）のままなので、先に NS の問い合わせは来ない"

@@ -1,0 +1,29 @@
+id: local-zone-nodefault-local-data-missing-type-nodata
+title:
+  en: "Under a nodefault name, a local-data name gets NODATA for a type it does not have"
+  ja: nodefault の名前の下の local-data の名前は、書いていない型に NODATA を返す
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c lz_setup_implicit() makes an implicit transparent zone for the local-data (see local-zone-nodefault-local-data-gets-implicit-zone). local_zones_zone_answer() answers NOERROR/NODATA for a transparent zone when the name has local_data but not of the asked type"
+  ja: "services/localzone.c lz_setup_implicit() が local-data に暗黙の transparent ゾーンを作る（local-zone-nodefault-local-data-gets-implicit-zone 参照）。local_zones_zone_answer() は transparent ゾーンで、名前に local_data があって問われた型がなければ NOERROR/NODATA を返す"
+manual:
+  en: "none (the transparent entry describes NODATA for a name in local-data, but nothing links it to nodefault)"
+  ja: "none（transparent の項は local-data にある名前の NODATA を書くが、nodefault との関係は書いていない）"
+layers:
+  en: ["implicit zone creation", "answer generation per zone type"]
+  ja: ["暗黙のゾーンの作成", "ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "test." nodefault
+  local-data: "a.test. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "a.test. AAAA"
+  rcode: "NOERROR"
+  answer_count: 0
+  note:
+    en: "Fills the nodefault row, type-missing column, of the table on the zone types page"
+    ja: "type のページの比較表の、nodefault の行の「型がない」の欄を埋める"

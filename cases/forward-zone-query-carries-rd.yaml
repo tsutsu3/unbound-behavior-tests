@@ -1,0 +1,38 @@
+id: forward-zone-query-carries-rd
+title:
+  en: "Queries sent to a forward-zone's forwarder carry the RD bit, and the forwarder's answer is returned"
+  ja: forward-zone の転送先へ送る問い合わせには RD が立ち、転送先の答えがそのまま返る
+chapter: "6.1"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c forward_request() sets iq->chase_flags |= BIT_RD for a forward zone, and the outgoing query is sent with chase_flags"
+  ja: "iterator/iterator.c forward_request() は forward zone で iq->chase_flags |= BIT_RD とし、送出する問い合わせは chase_flags で作られる"
+manual:
+  en: "none (Forward Zone Options says the remote server does the recursion, but not which flags are sent)"
+  ja: "none（Forward Zone Options は再帰を転送先が行うと書くが、送るフラグは書いていない）"
+layers:
+  en: ["forward decision", "outgoing query flags"]
+  ja: ["転送の判定", "送出する問い合わせのフラグ"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5620
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5620"
+      replies:
+        - qname: "www.example.com."
+          qtype: A
+          answer: ["www.example.com. 300 IN A 192.0.2.10"]
+      received_contains: ["www.example.com. A"]
+      received_rd: true
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["www.example.com. 300 IN A 192.0.2.10"]
+  note:
+    en: "The harness boilerplate sets do-not-query-localhost: no; with the default yes the 127.0.0.1 forwarder would not be used (see forward-addr-localhost-unused-by-default)"
+    ja: "ハーネスの定型部は do-not-query-localhost: no にしている。既定の yes では 127.0.0.1 の転送先は使われない（forward-addr-localhost-unused-by-default 参照）"

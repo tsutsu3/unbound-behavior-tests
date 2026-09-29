@@ -25,7 +25,13 @@ CATEGORIES = ("A", "B", "C", "D", "undecided")
 #: alongside so the Japanese tables are generated from the same case files.
 LANGS = ("en", "ja")
 
-COMMANDS = ("unbound-checkconf", "run-and-observe", "run-and-dig")
+COMMANDS = (
+    "unbound-checkconf",
+    "run-and-observe",
+    "run-and-dig",
+    "run-and-resolve",
+    "run-with-upstreams",
+)
 
 TOP_LEVEL_REQUIRED = (
     "id",
@@ -49,7 +55,7 @@ TOP_LEVEL_REQUIRED = (
 TOP_LEVEL_OPTIONAL = ("files",)
 
 EXPECT_KEYS = {
-    "unbound-checkconf": {"exit", "stderr_contains", "note"},
+    "unbound-checkconf": {"exit", "stderr_contains", "stderr_not_contains", "note"},
     "run-and-observe": {"checkconf_exit", "listen", "query", "note"},
     "run-and-dig": {
         "checkconf_exit",
@@ -58,12 +64,58 @@ EXPECT_KEYS = {
         "answer_contains",
         "answer_ttl",
         "answer_count",
+        "authority_contains",
         "stderr_contains",
+        "stderr_not_contains",
+        "note",
+    },
+    "run-with-upstreams": {
+        "checkconf_exit",
+        "upstreams",
+        "query",
+        "rcode",
+        "answer_contains",
+        "answer_count",
+        "authority_contains",
+        "stderr_contains",
+        "stderr_not_contains",
+        "note",
+    },
+    "run-and-resolve": {
+        "checkconf_exit",
+        "lookup",
+        "lookup_exit",
+        "lookup_contains",
+        "lookup_empty",
+        "control_lookup",
+        "control_contains",
         "note",
     },
 }
 
+#: expect keys whose value is a list of substrings, each of which must occur.
+LIST_KEYS = (
+    "answer_contains",
+    "authority_contains",
+    "lookup_contains",
+    "control_contains",
+)
+
 LISTEN_KEYS = {"proto", "addr"}
+
+#: One fake upstream of run-with-upstreams: where it listens, how it answers,
+#: and what must (or must not) have reached it.
+UPSTREAM_KEYS = {
+    "addr",
+    "proto",
+    "replies",
+    "received_contains",
+    "received_first",
+    "received_rd",
+    "received_none",
+    "tls_client_hello",
+}
+REPLY_KEYS = {"qname", "qtype", "rcode", "aa", "answer", "authority", "additional"}
 
 
 class CaseError(ValueError):
@@ -157,6 +209,47 @@ def _parse_files(path: pathlib.Path, raw: dict) -> dict[str, str]:
             f"the generated config built from `config:`",
         )
     return dict(files)
+
+
+def _parse_upstreams(path: pathlib.Path, expect: dict) -> None:
+    """Validate expect.upstreams of a run-with-upstreams case."""
+    ups = expect.get("upstreams")
+    _require(
+        isinstance(ups, list) and ups,
+        f"{path.name}: expect.upstreams must be a non-empty list",
+    )
+    _require("query" in expect, f"{path.name}: expect.query required")
+    for i, up in enumerate(ups):
+        where = f"{path.name}: expect.upstreams[{i}]"
+        _require(isinstance(up, dict), f"{where} must be a mapping")
+        unknown = set(up) - UPSTREAM_KEYS
+        _require(not unknown, f"{where}: unknown keys {sorted(unknown)}")
+        _require(
+            isinstance(up.get("addr"), str) and ":" in up["addr"],
+            f"{where}.addr must be 'address:port'",
+        )
+        _require(
+            up.setdefault("proto", "udp") in ("udp", "tcp"),
+            f"{where}.proto must be udp or tcp",
+        )
+        for rule in up.setdefault("replies", []):
+            _require(
+                isinstance(rule, dict) and not set(rule) - REPLY_KEYS,
+                f"{where}.replies: each rule is a mapping of {sorted(REPLY_KEYS)}",
+            )
+            for key in ("answer", "authority", "additional"):
+                _require(
+                    all(isinstance(x, str) for x in rule.get(key, [])),
+                    f"{where}.replies.{key} must be a list of RR strings",
+                )
+        _require(
+            not (up.get("received_none") and up.get("received_contains")),
+            f"{where}: received_none contradicts received_contains",
+        )
+        _require(
+            not up.get("tls_client_hello") or up["proto"] == "tcp",
+            f"{where}: tls_client_hello needs proto tcp",
+        )
 
 
 def _parse_text(path: pathlib.Path, where: str, value) -> Text:
@@ -278,6 +371,20 @@ def parse_case(path: pathlib.Path) -> Case:
         f"{path.name}: expect keys {sorted(unknown)} not valid for "
         f"command {raw['command']} (allowed: {sorted(allowed)})",
     )
+    for key in LIST_KEYS:
+        if key in expect:
+            _require(
+                isinstance(expect[key], list)
+                and all(isinstance(x, str) and x for x in expect[key]),
+                f"{path.name}: expect.{key} must be a list of non-empty strings",
+            )
+    if raw["command"] == "run-with-upstreams":
+        _parse_upstreams(path, expect)
+    if raw["command"] == "run-and-resolve":
+        _require(
+            isinstance(expect.get("lookup"), str) and expect["lookup"],
+            f"{path.name}: expect.lookup required",
+        )
     if raw["command"] == "run-and-observe":
         listen = expect.get("listen")
         _require(isinstance(listen, dict), f"{path.name}: expect.listen required")

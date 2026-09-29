@@ -1,0 +1,34 @@
+id: conf-include-toplevel-glob-processed-in-sorted-order
+title:
+  en: "include-toplevel: wildcards are read in sorted file name order too, and the last file wins"
+  ja: "include-toplevel: のワイルドカードもファイル名のソート順で読まれ、最後のファイルが勝つ"
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configlexer.lex the include-toplevel: rule calls config_start_include_glob(yytext, 1), the same function as include: with toplevel set. It does not set GLOB_NOSORT and pushes the files in reverse, so they are popped in sorted order. Head insertion in cfg_str2list_insert() then makes the line read last win"
+  ja: "util/configlexer.lex の include-toplevel: の規則は config_start_include_glob(yytext, 1) を呼ぶ。include: と同じ関数で、toplevel が立つだけ。GLOB_NOSORT を立てず逆順に積むので、取り出す順序はソート順になる。あとは cfg_str2list_insert() の先頭挿入で最後に読まれた行が勝つ"
+manual:
+  en: "doc/unbound.conf.5.in INCLUDING FILES: Wildcards can be used to include multiple files, see glob(7). (nothing about the read order)"
+  ja: "doc/unbound.conf.5.in INCLUDING FILES: Wildcards can be used to include multiple files, see glob(7).（読み込み順については記述がない）"
+layers:
+  en: ["glob expansion order", "include expansion", "config list build order (head insertion)"]
+  ja: ["glob 展開の順序", "インクルード展開", "設定リストの構築順（先頭挿入）"]
+status: verified
+config: |
+  include-toplevel: "conf.d/*.conf"
+files:
+  conf.d/10-first.conf: |
+    server:
+        local-zone: "example.com." static
+  conf.d/20-second.conf: |
+    server:
+        local-zone: "example.com." refuse
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. A"
+  rcode: "REFUSED"
+  note:
+    en: "The include-toplevel: form of conf-include-glob-processed-in-sorted-order. Packaged configs such as Debian's use this form for unbound.conf.d/*.conf"
+    ja: "conf-include-glob-processed-in-sorted-order の include-toplevel: 版。Debian のパッケージなどは unbound.conf.d/*.conf をこの形で読み込む"

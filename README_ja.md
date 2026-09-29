@@ -34,6 +34,16 @@ docker compose run --rm tests -vv --color=yes                 # 詳しく出す
 docker compose run --rm gen
 ```
 
+本に載せる `dig` の出力を保存する。`run-and-dig` のケース（と、特権ポートを使わない `run-with-upstreams` のケース）をもう一度回し、
+`query` を `dig @127.0.0.1 +nocmd +nostats <名前> <型>` で問い合わせた出力を
+`out/dig/<id>.txt` に書く。判定そのものは dnspython のまま。
+メッセージ ID は実行のたびに変わるが、違いが ID だけのファイルは書き換えない。本にコピーした抜粋と一致したままになる。
+`dig` の版は `out/dig/_dig-version.txt` に書く。
+
+```sh
+docker compose run --rm dig
+```
+
 lint と format は Ruff を使う。
 
 ```sh
@@ -151,11 +161,38 @@ files:
 
 | command             | 何をするか                                  | expect に書けるキー                                                                                            |
 | ------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `unbound-checkconf` | 設定を書いて `unbound-checkconf` を実行する | `exit`, `stderr_contains`, `note`                                                                              |
+| `unbound-checkconf` | 設定を書いて `unbound-checkconf` を実行する | `exit`, `stderr_contains`, `stderr_not_contains`, `note`                                                       |
 | `run-and-observe`   | daemon を起動し、偽の上流に届くかを見る     | `checkconf_exit`, `listen{proto,addr}`, `query`, `note`                                                        |
-| `run-and-dig`       | daemon を起動し、応答の中身を見る           | `checkconf_exit`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `stderr_contains`, `note` |
+| `run-and-dig`       | daemon を起動し、応答の中身を見る           | `checkconf_exit`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
+| `run-with-upstreams` | 問い合わせを記録し規則どおりに答える偽の上流（名前・型・RD・TCP の最初のバイト）を置き、daemon を起動して問い合わせる | `checkconf_exit`, `upstreams`, `query`, `rcode`, `answer_contains`, `answer_count`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
+| `run-and-resolve`   | daemon を 53 番で起動し、`/etc/resolv.conf` をそこへ向けて `getent ahosts` を実行する | `checkconf_exit`, `lookup`, `lookup_exit`, `lookup_contains`, `lookup_empty`, `control_lookup`, `control_contains`, `note` |
+
+`unbound-checkconf` の `stderr_contains` / `stderr_not_contains` は標準出力と標準エラー出力をまとめて検索する。
+`answer_contains` / `authority_contains` は、そのセクションを `www.example.com. 3600 IN A 192.0.2.1` の形で
+1 行 1 RR に書き出したものと照合する。
+
+`run-and-resolve` は、スタブリゾルバー（glibc の `getaddrinfo()`）が応答をどう扱うかを見る。
+glibc の `resolv.conf` にはポートを書けないので、このコマンドだけ Unbound を 53 番で起動し、
+ケースの間だけコンテナ自身の `/etc/resolv.conf` を書き換える。
+`lookup_exit` は `getent` の終了コード（名前が見つからなければ 2）。
+`lookup_empty: true` は何も出力されないことを求める。
+`control_lookup` は同じ Unbound で引く対照の名前で、成功し `control_contains` をすべて含むことを求める。
+`lookup` の失敗が、ハーネスが Unbound に届いていないせいではないことを確かめるためのもの。
 
 `run-and-dig` の `stderr_contains` は daemon を止めてから読む。
+
+`run-with-upstreams` は `upstreams` に偽の上流を並べる。各要素は `addr`（`アドレス:ポート`）、
+`proto`（既定の `udp` か `tcp`）、`replies` を持つ。`replies` は上から順に試す規則で、
+省略可能な `qname` / `qtype` に一致したら、`rcode`（既定 `NOERROR`）、`aa`、
+RR の文字列の `answer` / `authority` / `additional` で答える。一致する規則がなければ何も返さない。
+届いたものは `received_contains`（`"<名前> <型>"` の並び）、`received_first`、
+`received_rd`（すべての問い合わせの RD）、`received_none` で判定する。
+TCP では `tls_client_hello` が、各接続が TLS のハンドシェイクのレコードで始まるかを見る。
+TLS のハンドシェイクを完了させる処理はない。
+
+定型部は、ループバックの偽の上流に届くよう `do-not-query-localhost: no` にしている。
+既定の `yes` では、Unbound は 127.0.0.0/8 と ::1 へ何も送らない（`forward-addr-localhost-unused-by-default`）。
+
 `verbosity: 4` を設定に書けば内部の詳細ログを判定に使える
 （`unbound-checkconf` はグローバル `verbosity` を設定しないので、これは daemon でしか見えない）。
 
@@ -199,10 +236,10 @@ Source だけの主張を Test 済みとして書かない。逆も同じ。
 | `cases/`             | ケース定義                               |
 | `runner/cases.py`    | YAML の読み込みとスキーマ検証            |
 | `runner/unbound.py`  | 設定生成と Unbound の起動・問い合わせ    |
-| `runner/upstream.py` | 偽の上流サーバー（宛先の観測）           |
+| `runner/upstream.py` | 偽の上流サーバー（宛先の観測、応答と記録）|
 | `test_behavior.py`   | pytest のエントリ（1 関数）              |
 | `gen.py`             | 付録一覧表と集計の生成（英語・日本語）   |
-| `out/`               | `gen.py` の出力。コミットする            |
+| `out/`               | `gen.py` の出力と `out/dig/`（`dig` の出力）。コミットする |
 | `README.md`          | この README の英語版                     |
 | `references/`        | Unbound のチェックアウト。**Git 管理外** |
 

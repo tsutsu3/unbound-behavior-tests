@@ -1,0 +1,51 @@
+id: forward-first-falls-back-on-servfail
+title:
+  en: "With forward-first: yes, a SERVFAIL from the forwarder makes Unbound send the query to the root hints"
+  ja: "forward-first: yes では、転送先の SERVFAIL を受けると問い合わせがルートヒントへ送られる"
+chapter: "6.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c: a SERVFAIL reply is not usable, the forwarder is the only target, so processQueryTargets() reaches processLastResort(); read_forwards() in iterator/iter_fwd.c sets has_parent_side_NS = !isfirst, so with forward-first the root hints are used"
+  ja: "iterator/iterator.c では SERVFAIL の応答は使えず、転送先が唯一の宛先なので processQueryTargets() が processLastResort() に進む。iterator/iter_fwd.c read_forwards() が has_parent_side_NS = !isfirst とするので、forward-first ではルートヒントが使われる"
+manual:
+  en: "doc/unbound.conf.5.in, forward-first: If a forwarded query is met with a SERVFAIL error and this option is enabled Unbound will fall back to less specific resolution. This can lead to using less specific configured forward/stub/auth zones if any, or end up to otherwise normal recursive resolution for that particular query."
+  ja: "doc/unbound.conf.5.in forward-first の項: If a forwarded query is met with a SERVFAIL error and this option is enabled Unbound will fall back to less specific resolution. This can lead to using less specific configured forward/stub/auth zones if any, or end up to otherwise normal recursive resolution for that particular query."
+layers:
+  en: ["response classification", "last resort fallback"]
+  ja: ["応答の分類", "最後の手段のフォールバック"]
+status: verified
+config: |
+  root-hints: "root.hints"
+  forward-zone:
+    name: "."
+    forward-first: yes
+    forward-addr: 127.0.0.1@5623
+files:
+  root.hints: |
+    .                    3600000 NS A.ROOT-SERVERS.NET.
+    A.ROOT-SERVERS.NET.  3600000 A  127.0.0.2
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5623"
+      replies:
+        - rcode: "SERVFAIL"
+      received_contains: ["www.example.com. A"]
+    - addr: "127.0.0.2:53"
+      replies:
+        - qname: "."
+          qtype: NS
+          aa: true
+          answer: [". 3600 IN NS a.root-servers.net."]
+          additional: ["a.root-servers.net. 3600 IN A 127.0.0.2"]
+        - qname: "www.example.com."
+          qtype: A
+          aa: true
+          answer: ["www.example.com. 300 IN A 192.0.2.14"]
+      received_contains: ["www.example.com. A"]
+  query: "www.example.com. A"
+  note:
+    en: "Unlike forward-first-falls-back-to-root-hints-on-timeout, the forwarder answers (with SERVFAIL), and the root hint server is checked for the query name itself rather than for any packet"
+    ja: "forward-first-falls-back-to-root-hints-on-timeout と違い、転送先は SERVFAIL で応答する。ルートヒントの相手には、何かが届いたことではなく、問い合わせの名前そのものが届いたことを確かめる"

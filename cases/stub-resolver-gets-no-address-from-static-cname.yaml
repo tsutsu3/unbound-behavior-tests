@@ -1,0 +1,32 @@
+id: stub-resolver-gets-no-address-from-static-cname
+title:
+  en: "glibc's stub resolver gets no address for a name that has only a CNAME in a static zone"
+  ja: static ゾーンで CNAME だけを持つ名前には、glibc のスタブリゾルバーはアドレスを得られない
+chapter: "5.5"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_data_answer() answers an A or AAAA query with the CNAME RRset alone (see local-data-cname-in-static-zone-not-chased). glibc's stub resolver (getaddrinfo() through nss_dns) sends the query with RD set and relies on the server to chase: it follows the CNAME only within the answer section and does not query the target itself"
+  ja: "services/localzone.c local_data_answer() は A / AAAA の問い合わせに CNAME の RRset だけで答える（local-data-cname-in-static-zone-not-chased 参照）。glibc のスタブリゾルバー（nss_dns を通る getaddrinfo()）は RD を立てて問い合わせ、CNAME の追跡をサーバーに任せる。応答の ANSWER の中でだけ CNAME をたどり、ターゲットを自分では問い合わせない"
+manual:
+  en: "doc/unbound.conf.5.in, redirect entry: CNAME resolution is supported only in type redirect local-zone, and in type inform_redirect local-zone."
+  ja: "doc/unbound.conf.5.in redirect の項: CNAME resolution is supported only in type redirect local-zone, and in type inform_redirect local-zone."
+layers:
+  en: ["answer built from a single RRset", "stub resolver that does not chase CNAMEs"]
+  ja: ["RRset 1 つからの応答生成", "CNAME を追わないスタブリゾルバー"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "www.example.com. CNAME host.example.com."
+  local-data: "host.example.com. A 192.0.2.1"
+command: run-and-resolve
+expect:
+  checkconf_exit: 0
+  lookup: "www.example.com."
+  lookup_exit: 2
+  lookup_empty: true
+  control_lookup: "host.example.com."
+  control_contains: ["192.0.2.1"]
+  note:
+    en: "getent ahosts exits 2 (key not found) and prints nothing, although host.example.com.'s A is in the same zone. The control lookup of host.example.com. through the same Unbound gets 192.0.2.1, so the failure is not the harness"
+    ja: "同じゾーンに host.example.com. の A があっても、getent ahosts は終了コード 2（キーが見つからない）で何も出さない。対照として同じ Unbound で host.example.com. を引くと 192.0.2.1 が出るので、失敗はハーネスのせいではない"

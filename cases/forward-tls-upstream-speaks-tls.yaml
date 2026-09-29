@@ -1,0 +1,33 @@
+id: forward-tls-upstream-speaks-tls
+title:
+  en: "With forward-tls-upstream: yes, the TCP connection to the forwarder starts with a TLS handshake"
+  ja: "forward-tls-upstream: yes では、転送先への TCP 接続は TLS のハンドシェイクで始まる"
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/outside_network.c outnet_tcp_take_into_use() starts SSL on the connection when ssl_upstream is set, so the first record sent is a TLS handshake (content type 0x16) rather than a two byte DNS length"
+  ja: "services/outside_network.c outnet_tcp_take_into_use() は ssl_upstream のとき接続で SSL を始めるので、最初に送るのは DNS の2バイトの長さではなく TLS のハンドシェイクのレコード（content type 0x16）"
+manual:
+  en: "doc/unbound.conf.5.in, forward-tls-upstream: Enabled or disable whether the queries to this forwarder use TLS for transport."
+  ja: "doc/unbound.conf.5.in forward-tls-upstream の項: Enabled or disable whether the queries to this forwarder use TLS for transport."
+layers:
+  en: ["TLS start on outgoing TCP"]
+  ja: ["送出 TCP での TLS 開始"]
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-tls-upstream: yes
+    forward-addr: 127.0.0.1@5853
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5853"
+      proto: tcp
+      tls_client_hello: true
+  query: "www.example.com. A"
+  note:
+    en: "The fake server only records the first bytes and hangs up; it does not complete the handshake. forward-tls-upstream-with-port-uses-tcp-to-that-port shows only that TCP reaches the port"
+    ja: "偽の相手は最初のバイトを記録して切るだけで、ハンドシェイクは完了させない。forward-tls-upstream-with-port-uses-tcp-to-that-port が示すのは TCP でそのポートに届くことだけ"

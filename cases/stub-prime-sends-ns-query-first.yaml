@@ -1,0 +1,45 @@
+id: stub-prime-sends-ns-query-first
+title:
+  en: "With stub-prime: yes, the first query to the stub server is an NS query for the zone"
+  ja: "stub-prime: yes では、stub の相手へ最初に送るのはゾーンの NS の問い合わせ"
+chapter: "6.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c prime_stub() starts a priming subquery for the stub zone's NS when the stub hint is not noprime (stub-prime: yes)"
+  ja: "iterator/iterator.c prime_stub() は stub の hint が noprime でない（stub-prime: yes）とき、stub ゾーンの NS のプライミングの副問い合わせを始める"
+manual:
+  en: "doc/unbound.conf.5.in, stub-prime: If enabled it performs NS set priming, which is similar to root hints, where it starts using the list of nameservers currently published by the zone."
+  ja: "doc/unbound.conf.5.in stub-prime の項: If enabled it performs NS set priming, which is similar to root hints, where it starts using the list of nameservers currently published by the zone."
+layers:
+  en: ["stub priming"]
+  ja: ["stub のプライミング"]
+status: verified
+config: |
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1
+    stub-prime: yes
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:53"
+      replies:
+        - qname: "example.com."
+          qtype: NS
+          aa: true
+          answer: ["example.com. 300 IN NS ns.example.com."]
+          additional: ["ns.example.com. 300 IN A 127.0.0.1"]
+        - qname: "www.example.com."
+          qtype: A
+          aa: true
+          answer: ["www.example.com. 300 IN A 192.0.2.12"]
+      received_first: "example.com. NS"
+      received_contains: ["example.com. NS", "www.example.com. A"]
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["www.example.com. 300 IN A 192.0.2.12"]
+  note:
+    en: "The NS set published by the fake server points back at itself on port 53, since glue has no port"
+    ja: "グルーにはポートを書けないので、偽の相手が返す NS は 53 番の自分自身を指す"

@@ -1,0 +1,28 @@
+id: checkconf-silent-on-implicit-and-builtin-zones
+title:
+  en: "unbound-checkconf prints no warning when local-data creates an implicit transparent zone or goes into a built-in zone"
+  ja: local-data が暗黙の transparent ゾーンを作っても、組み込みゾーンに入っても、unbound-checkconf は警告を出さない
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "smallapp/unbound-checkconf.c localzonechecks() runs local_zones_apply_cfg(), which creates the implicit zone in lz_setup_implicit() and enters the built-in zones in local_zone_enter_defaults() without printing anything. The implicit zone is logged only by log_nametypeclass(VERB_ALGO, ...), that is at verbosity 4 in the daemon"
+  ja: "smallapp/unbound-checkconf.c localzonechecks() は local_zones_apply_cfg() を呼び、暗黙のゾーンは lz_setup_implicit() が、組み込みゾーンは local_zone_enter_defaults() が何も出力せずに作る。暗黙のゾーンが出るのは log_nametypeclass(VERB_ALGO, ...) で、daemon の verbosity 4 のときだけ"
+manual:
+  en: "none"
+  ja: "none"
+layers:
+  en: ["checkconf checks"]
+  ja: ["checkconf の検査"]
+status: verified
+config: |
+  local-data: "a.example.com. A 192.0.2.1"
+  local-data: "nas.home.arpa. A 192.168.1.10"
+command: unbound-checkconf
+expect:
+  exit: 0
+  stderr_contains: "unbound-checkconf: no errors in unbound.conf"
+  stderr_not_contains: "warning"
+  note:
+    en: "a.example.com. gets an implicit transparent zone (see local-zone-implicit-transparent-gives-nodata) and nas.home.arpa. goes into the built-in home.arpa. (see local-data-under-home-arpa-enters-builtin-zone). No warning is printed"
+    ja: "a.example.com. には暗黙の transparent ゾーンができ（local-zone-implicit-transparent-gives-nodata 参照）、nas.home.arpa. は組み込みの home.arpa. に入る（local-data-under-home-arpa-enters-builtin-zone 参照）。警告は出ない"

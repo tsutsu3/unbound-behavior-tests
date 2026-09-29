@@ -36,6 +36,17 @@ this repository. The English tables are `*.md` and the Japanese ones are
 docker compose run --rm gen
 ```
 
+Save the output of `dig` for the book to include. Every `run-and-dig` case (and
+`run-with-upstreams` case on unprivileged ports) is run again and the output of `dig @127.0.0.1 +nocmd +nostats <name> <type>` for
+its `query` goes to `out/dig/<id>.txt`. The checks themselves still use
+dnspython. The message id changes on every run; a file whose only difference is the id
+is left as it is, so the excerpts copied into the book keep matching. The version of dig is written to
+`out/dig/_dig-version.txt`.
+
+```sh
+docker compose run --rm dig
+```
+
 Linting and formatting use Ruff.
 
 ```sh
@@ -161,11 +172,55 @@ either (it would clash with the file generated from `config:`).
 
 | command             | What it does                                         | Keys allowed in expect                                                                                         |
 | ------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `unbound-checkconf` | Writes the config and runs `unbound-checkconf`       | `exit`, `stderr_contains`, `note`                                                                              |
+| `unbound-checkconf` | Writes the config and runs `unbound-checkconf`       | `exit`, `stderr_contains`, `stderr_not_contains`, `note`                                                       |
 | `run-and-observe`   | Starts the daemon and checks what reaches a fake upstream | `checkconf_exit`, `listen{proto,addr}`, `query`, `note`                                                   |
-| `run-and-dig`       | Starts the daemon and checks the content of the answer | `checkconf_exit`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `stderr_contains`, `note` |
+| `run-and-dig`       | Starts the daemon and checks the content of the answer | `checkconf_exit`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
+| `run-with-upstreams` | Starts fake upstreams that record each query (name, type, RD bit, first TCP bytes) and answer by rule, then starts the daemon and queries it | `checkconf_exit`, `upstreams`, `query`, `rcode`, `answer_contains`, `answer_count`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
+| `run-and-resolve`   | Starts the daemon on port 53, points `/etc/resolv.conf` at it and runs `getent ahosts` | `checkconf_exit`, `lookup`, `lookup_exit`, `lookup_contains`, `lookup_empty`, `control_lookup`, `control_contains`, `note` |
+
+`stderr_contains` / `stderr_not_contains` in `unbound-checkconf` search stdout
+and stderr together. `answer_contains` / `authority_contains` match against the
+section rendered one RR per line, as in `www.example.com. 3600 IN A 192.0.2.1`.
+
+`run-and-resolve` observes what a stub resolver (glibc's `getaddrinfo()`) makes
+of the answer. glibc's `resolv.conf` has no port, so only this command runs
+Unbound on 53, and it rewrites the container's own `/etc/resolv.conf` for the
+duration of the case. `lookup_exit` is `getent`'s exit code (2 when the name
+was not found). `lookup_empty: true` requires that nothing was printed.
+`control_lookup` is a second name looked up through the same Unbound, which
+must succeed (and contain every `control_contains`), so that a failed `lookup`
+cannot be the harness failing to reach Unbound.
 
 `stderr_contains` in `run-and-dig` is read after the daemon has stopped.
+
+`run-with-upstreams` takes a list of fake upstreams under `upstreams`. Each has
+`addr` (`address:port`), `proto` (`udp`, the default, or `tcp`), and `replies`:
+rules tried in order, each matching an optional `qname` / `qtype` and giving
+`rcode` (default `NOERROR`), `aa`, and `answer` / `authority` / `additional`
+as RR strings. With no matching rule the upstream stays silent. What must have
+arrived is checked with `received_contains` (`"<name> <type>"` entries),
+`received_first`, `received_rd` (the RD bit of every query) and
+`received_none`; over TCP, `tls_client_hello` checks that each connection
+starts with a TLS handshake record. Nothing here completes a TLS handshake.
+
+```yaml
+command: run-with-upstreams
+expect:
+  upstreams:
+    - addr: "127.0.0.1:5620"
+      replies:
+        - qname: "www.example.com."
+          qtype: A
+          answer: ["www.example.com. 300 IN A 192.0.2.10"]
+      received_rd: true
+  query: "www.example.com. A"
+  answer_contains: ["192.0.2.10"]
+```
+
+The boilerplate sets `do-not-query-localhost: no` so that fake upstreams on
+loopback can be reached at all. With the default (`yes`) Unbound sends nothing
+to 127.0.0.0/8 or ::1 (`forward-addr-localhost-unused-by-default`).
+
 Writing `verbosity: 4` in the config lets the detailed internal log be used in
 the check (`unbound-checkconf` does not set the global `verbosity`, so this is
 visible only from the daemon).
@@ -217,7 +272,7 @@ from the results.
 | `runner/upstream.py` | Fake upstream server (observes the destination)    |
 | `test_behavior.py`   | pytest entry point (a single function)             |
 | `gen.py`             | Generates the Appendix tables and summary (English and Japanese) |
-| `out/`               | Output of `gen.py`. Committed                      |
+| `out/`               | Output of `gen.py`, and `out/dig/` (output of `dig`). Committed |
 | `README_ja.md`       | Japanese version of this README                    |
 | `references/`        | Unbound checkout. **Not tracked by Git**           |
 

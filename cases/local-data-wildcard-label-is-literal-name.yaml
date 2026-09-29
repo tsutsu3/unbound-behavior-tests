@@ -6,8 +6,8 @@ chapter: "5.5"
 category: C
 versions: ["1.26.0"]
 source:
-  en: "services/localzone.c has no wildcard matching. The only use of dname_is_wild() is CNAME target expansion in local_zone_answer_cname() (L1593), not owner name matching. The comment at local_zones_zone_answer() L1728 also says no additional section processing, cname, dname or wildcard processing. The name is converted to wire form unchanged by sldns_str2wire_dname(), and * is stored as a one-byte label"
-  ja: "services/localzone.c にワイルドカード照合が無い。dname_is_wild() の参照は local_zone_answer_cname() の CNAME ターゲット展開（L1593）だけで、オーナー名の照合には使われない。local_zones_zone_answer() L1728 のコメントも no additional section processing, cname, dname or wildcard processing と明記する。名前は sldns_str2wire_dname() でそのままワイヤ化され、* は 1 バイトのラベル内容として格納される"
+  en: "services/localzone.c has no wildcard matching. The only use of dname_is_wild() is CNAME target expansion in local_data_answer() (L1593), not owner name matching. The comment at local_zones_zone_answer() L1728 also says no additional section processing, cname, dname or wildcard processing. The name is converted to wire form unchanged by sldns_str2wire_dname(), and * is stored as a one-byte label"
+  ja: "services/localzone.c にワイルドカード照合が無い。dname_is_wild() の参照は local_data_answer() の CNAME ターゲット展開（L1593）だけで、オーナー名の照合には使われない。local_zones_zone_answer() L1728 のコメントも no additional section processing, cname, dname or wildcard processing と明記する。名前は sldns_str2wire_dname() でそのままワイヤ化され、* は 1 バイトのラベル内容として格納される"
 manual:
   en: "doc/unbound.conf.5.in L2935-L2938 and L3455-L3458: If you need more complicated authoritative data, with referrals, wildcards, CNAME/DNAME support, or DNSSEC authoritative service, setup a stub-zone for it as detailed in the stub zone section below."
   ja: "doc/unbound.conf.5.in L2935-L2938 および L3455-L3458: If you need more complicated authoritative data, with referrals, wildcards, CNAME/DNAME support, or DNSSEC authoritative service, setup a stub-zone for it as detailed in the stub zone section below."

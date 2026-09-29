@@ -1,0 +1,30 @@
+id: local-zone-redirect-apex-gets-apex-data
+title:
+  en: "A redirect zone answers a query for its apex with the apex local-data"
+  ja: redirect ゾーンは頂点の名前への問い合わせに、頂点の local-data で答える
+chapter: "5.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_data_answer() looks up z->name for local_zone_redirect; for the apex that is the qname itself"
+  ja: "services/localzone.c local_data_answer() は local_zone_redirect では z->name を探す。頂点ではそれが問い合わせ名そのもの"
+manual:
+  en: "none (the redirect entry covers the zone and its subdomains, but this case only fills in the table cell for the apex)"
+  ja: "none（redirect の項はゾーンとサブドメインを扱う。このケースは表の頂点の欄を埋めるためのもの）"
+layers:
+  en: ["answer generation per zone type"]
+  ja: ["ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "example.com." redirect
+  local-data: "example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "example.com. A"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ["example.com. 3600 IN A 192.0.2.1"]
+  note:
+    en: "See local-zone-redirect-subdomain-gets-apex-data for names below the apex"
+    ja: "頂点より下の名前は local-zone-redirect-subdomain-gets-apex-data を参照"
