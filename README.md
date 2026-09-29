@@ -174,7 +174,7 @@ either (it would clash with the file generated from `config:`).
 | ------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `unbound-checkconf` | Writes the config and runs `unbound-checkconf`       | `exit`, `stderr_contains`, `stderr_not_contains`, `note`                                                       |
 | `run-and-observe`   | Starts the daemon and checks what reaches a fake upstream | `checkconf_exit`, `listen{proto,addr}`, `query`, `note`                                                   |
-| `run-and-dig`       | Starts the daemon and checks the content of the answer | `checkconf_exit`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
+| `run-and-dig`       | Starts the daemon and checks the content of the answer | `checkconf_exit`, `starts`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
 | `run-with-upstreams` | Starts fake upstreams that record each query (name, type, RD bit, first TCP bytes) and answer by rule, then starts the daemon and queries it | `checkconf_exit`, `upstreams`, `query`, `rcode`, `answer_contains`, `answer_count`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
 | `run-and-resolve`   | Starts the daemon on port 53, points `/etc/resolv.conf` at it and runs `getent ahosts` | `checkconf_exit`, `lookup`, `lookup_exit`, `lookup_contains`, `lookup_empty`, `control_lookup`, `control_contains`, `note` |
 
@@ -192,6 +192,9 @@ must succeed (and contain every `control_contains`), so that a failed `lookup`
 cannot be the harness failing to reach Unbound.
 
 `stderr_contains` in `run-and-dig` is read after the daemon has stopped.
+`starts: false` in `run-and-dig` expects the daemon to exit on its own with a
+non-zero code (for configs that checkconf passes but the daemon refuses); no
+query is sent, and only `checkconf_exit` and the stderr keys can be checked.
 
 `run-with-upstreams` takes a list of fake upstreams under `upstreams`. Each has
 `addr` (`address:port`), `proto` (`udp`, the default, or `tcp`), and `replies`:

@@ -163,7 +163,7 @@ files:
 | ------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `unbound-checkconf` | 設定を書いて `unbound-checkconf` を実行する | `exit`, `stderr_contains`, `stderr_not_contains`, `note`                                                       |
 | `run-and-observe`   | daemon を起動し、偽の上流に届くかを見る     | `checkconf_exit`, `listen{proto,addr}`, `query`, `note`                                                        |
-| `run-and-dig`       | daemon を起動し、応答の中身を見る           | `checkconf_exit`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
+| `run-and-dig`       | daemon を起動し、応答の中身を見る           | `checkconf_exit`, `starts`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
 | `run-with-upstreams` | 問い合わせを記録し規則どおりに答える偽の上流（名前・型・RD・TCP の最初のバイト）を置き、daemon を起動して問い合わせる | `checkconf_exit`, `upstreams`, `query`, `rcode`, `answer_contains`, `answer_count`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
 | `run-and-resolve`   | daemon を 53 番で起動し、`/etc/resolv.conf` をそこへ向けて `getent ahosts` を実行する | `checkconf_exit`, `lookup`, `lookup_exit`, `lookup_contains`, `lookup_empty`, `control_lookup`, `control_contains`, `note` |
 
@@ -180,6 +180,8 @@ glibc の `resolv.conf` にはポートを書けないので、このコマン�
 `lookup` の失敗が、ハーネスが Unbound に届いていないせいではないことを確かめるためのもの。
 
 `run-and-dig` の `stderr_contains` は daemon を止めてから読む。
+`run-and-dig` の `starts: false` は、daemon が自分から 0 以外の終了コードで終わることを求める
+（checkconf は通るのに daemon が受け付けない設定のため）。問い合わせは送らず、判定できるのは `checkconf_exit` と stderr のキーだけ。
 
 `run-with-upstreams` は `upstreams` に偽の上流を並べる。各要素は `addr`（`アドレス:ポート`）、
 `proto`（既定の `udp` か `tcp`）、`replies` を持つ。`replies` は上から順に試す規則で、

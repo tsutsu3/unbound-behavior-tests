@@ -6,8 +6,8 @@ chapter: "6.4"
 category: B
 versions: ["1.26.0"]
 source:
-  en: "util/net_help.c authextstrtoaddr() assigns UNBOUND_DNS_OVER_TLS_PORT (853 in config.h.in) directly. cfg->ssl_port (tls-port:) is read only on the listening side in services/listen_dnsport.c and in services/authzone.c, and plays no part in parsing forward-addr / stub-addr"
-  ja: "util/net_help.c authextstrtoaddr() が UNBOUND_DNS_OVER_TLS_PORT (config.h.in で 853) を直接代入する。cfg->ssl_port（tls-port:）は services/listen_dnsport.c の待ち受け側と services/authzone.c でしか読まれず、forward-addr / stub-addr の解釈には一切関与しない"
+  en: "util/net_help.c authextstrtoaddr() assigns UNBOUND_DNS_OVER_TLS_PORT (853 in config.h.in) directly. cfg->ssl_port (tls-port:) is otherwise read on the listening side in services/listen_dnsport.c, in services/authzone.c, and by iterator/iter_utils.c deleg_port_number() for delegation targets when the global tls-upstream is yes; it plays no part in parsing forward-addr / stub-addr"
+  ja: "util/net_help.c authextstrtoaddr() が UNBOUND_DNS_OVER_TLS_PORT (config.h.in で 853) を直接代入する。cfg->ssl_port（tls-port:）を読むのは、services/listen_dnsport.c の待ち受け側、services/authzone.c、それにグローバルの tls-upstream が yes のとき委任先の宛先に使う iterator/iter_utils.c deleg_port_number() で、forward-addr / stub-addr の解釈には一切関与しない"
 manual:
   en: "doc/unbound.conf.5.in, forward-addr entry: If only '#' is used the default port is the configured tls-port."
   ja: "doc/unbound.conf.5.in forward-addr の項: If only '#' is used the default port is the configured tls-port."

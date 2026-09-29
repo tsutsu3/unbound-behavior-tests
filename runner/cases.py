@@ -59,6 +59,7 @@ EXPECT_KEYS = {
     "run-and-observe": {"checkconf_exit", "listen", "query", "note"},
     "run-and-dig": {
         "checkconf_exit",
+        "starts",
         "query",
         "rcode",
         "answer_contains",
@@ -380,6 +381,18 @@ def parse_case(path: pathlib.Path) -> Case:
             )
     if raw["command"] == "run-with-upstreams":
         _parse_upstreams(path, expect)
+    if expect.get("starts") is False:
+        clash = set(expect) & {
+            "rcode",
+            "answer_contains",
+            "answer_count",
+            "answer_ttl",
+            "authority_contains",
+        }
+        _require(
+            not clash,
+            f"{path.name}: starts: false cannot check an answer ({sorted(clash)})",
+        )
     if raw["command"] == "run-and-resolve":
         _require(
             isinstance(expect.get("lookup"), str) and expect["lookup"],

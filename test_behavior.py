@@ -158,6 +158,19 @@ def _run_observe_case(case: Case, tmp: pathlib.Path, report: Report, opts) -> No
 def _run_dig_case(case: Case, tmp: pathlib.Path, report: Report, opts) -> None:
     conf, _ = _checkconf_gate(case, tmp, report)
     proc = unbound.UnboundProcess(conf)
+    if case.expect.get("starts") is False:
+        # A config that checkconf passes but the daemon refuses: it must
+        # exit on its own, and its log says why.
+        with proc:
+            code = proc.wait_exit(timeout=10.0)
+        report.note(f"unbound exit code: {code}")
+        report.check(
+            "unbound exited on its own with a failure",
+            True,
+            code is not None and code != 0,
+        )
+        _check_stderr(case, report, proc.stderr)
+        return
     with proc:
         if not proc.wait_ready():
             report.note(f"unbound stderr:\n{proc.stderr}")

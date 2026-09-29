@@ -1,0 +1,31 @@
+id: domain-insecure-with-auto-trust-anchor-is-config-error
+title:
+  en: "domain-insecure for a name that also has an auto-trust-anchor-file is rejected by checkconf and the daemon does not start"
+  ja: auto-trust-anchor-file と同じ名前を domain-insecure に書くと、unbound-checkconf は失敗し、daemon も起動しない
+chapter: "6.5"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "validator/val_anchor.c anchors_apply_cfg() enters domain-insecure names first (anchor_insert_insecure(), a trust anchor without autotrust) and auto-trust-anchor-file last. validator/autotrust.c find_add_tp() then finds that anchor without tp->autr and logs 'anchor cannot be with and without autotrust', so validator init fails. smallapp/unbound-checkconf.c check_mod() initialises the validator module as well, so it fails with the same error"
+  ja: "validator/val_anchor.c anchors_apply_cfg() は domain-insecure の名前を先に（anchor_insert_insecure()、autotrust でない信頼アンカーとして）入れ、auto-trust-anchor-file を最後に読む。validator/autotrust.c find_add_tp() は tp->autr のないそのアンカーを見つけて 'anchor cannot be with and without autotrust' を出し、validator の初期化が失敗する。smallapp/unbound-checkconf.c の check_mod() も validator モジュールを初期化するので、同じエラーで失敗する"
+manual:
+  en: "doc/unbound.conf.5.in, domain-insecure: If you set trust anchors for the domain they override this setting (and the domain is secured)."
+  ja: "doc/unbound.conf.5.in domain-insecure の項: If you set trust anchors for the domain they override this setting (and the domain is secured)."
+layers:
+  en: ["trust anchor loading order", "autotrust trust point lookup"]
+  ja: ["信頼アンカーの読み込み順", "autotrust の trust point の検索"]
+status: verified
+config: |
+  auto-trust-anchor-file: "root.key"
+  domain-insecure: "."
+files:
+  root.key: |
+    . IN DS 20326 8 2 E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D
+command: run-and-dig
+expect:
+  checkconf_exit: 1
+  starts: false
+  stderr_contains: "anchor cannot be with and without autotrust"
+  note:
+    en: "The manual says the trust anchor overrides domain-insecure; with auto-trust-anchor-file (what distribution packages use) the combination is instead a configuration error, caught by checkconf and fatal for the daemon. The source was first read as checkconf not loading trust anchors; running it showed otherwise. With trust-anchor or trust-anchor-file the anchor is merged and the manual's description holds (source only)"
+    ja: "man は信頼アンカーが domain-insecure に優先すると書くが、auto-trust-anchor-file（パッケージが使う形）ではこの組み合わせは設定の誤りになり、checkconf で見つかり、daemon では起動できない。ソースを読んだ段階では checkconf は信頼アンカーを読まないと予測したが、実行して違うと分かった。trust-anchor や trust-anchor-file ならアンカーは合わさり、man の記述どおりになる（ソースのみ）"
