@@ -82,6 +82,14 @@ uv run ruff check .
 uv run ruff format .
 ```
 
+本の Appendix「未文書化の挙動」のページは、本の本文を入力にして別に生成する。
+各項目を、そのケースを脚注で引いている本文のページへ結び付けるためで、出力は
+`out/` ではなく指定したディレクトリへ直接書く。
+
+```sh
+uv run python gen.py --book <本の src/content/docs/ja> --book-out <出力先>
+```
+
 ## ケースの書き方
 
 1ケース = ファイル1つ = テスト1本 = 付録の1行。

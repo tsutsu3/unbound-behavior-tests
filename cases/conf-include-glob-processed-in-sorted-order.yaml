@@ -31,4 +31,4 @@ expect:
   rcode: "REFUSED"
   note:
     en: "20- beats 10-. Wildcard expansion for unbound -c itself is done by util/config_file.c config_read(), which does set GLOB_NOSORT, so its order is not guaranteed. That is a different path from include:"
-    ja: "20- が 10- に勝つ。なお unbound -c 自体のワイルドカード展開は util/config_file.c config_read() が担当し、そちらは GLOB_NOSORT を立てるので順序が保証されない。include: の中とは別の経路"
+    ja: "20- が 10- に勝つ。なお `unbound -c` 自体のワイルドカード展開は util/config_file.c config_read() が担当し、そちらは GLOB_NOSORT を立てるので順序が保証されない。include: の中とは別の経路"

@@ -87,6 +87,15 @@ uv run ruff check .
 uv run ruff format .
 ```
 
+The book's Appendix pages on undocumented behaviour are generated separately,
+with the book's body pages as input: each item is tied to the body page whose
+footnote cites its case. They are written straight into the given directory,
+not into `out/`.
+
+```sh
+uv run python gen.py --book <book src/content/docs/ja> --book-out <dir>
+```
+
 ## Writing a case
 
 One case = one file = one test = one row of the Appendix table.

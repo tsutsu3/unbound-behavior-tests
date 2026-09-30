@@ -19,10 +19,12 @@ Two rules the output obeys deliberately:
   is published is the book repository's decision and is not encoded here.
 """
 
+import argparse
 import pathlib
 import subprocess
 import sys
 
+import book
 from runner.cases import LANGS, Case, load_cases
 
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -198,7 +200,29 @@ def out_name(stem: str, lang: str) -> str:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--book",
+        type=pathlib.Path,
+        help="the book's docs directory for Japanese (src/content/docs/ja); "
+        "writes the Appendix pages on undocumented behaviour instead of out/",
+    )
+    parser.add_argument(
+        "--book-out",
+        type=pathlib.Path,
+        help="where to write those pages (required with --book)",
+    )
+    args = parser.parse_args()
     cases = load_cases()
+    if args.book is not None:
+        if args.book_out is None:
+            parser.error("--book needs --book-out")
+        args.book_out.mkdir(parents=True, exist_ok=True)
+        files = book.render(cases, args.book)
+        for name, text in files.items():
+            (args.book_out / name).write_text(text, encoding="utf-8")
+        print(f"wrote {len(files)} pages into {args.book_out}/")
+        return 0
     OUT.mkdir(exist_ok=True)
     for lang in LANGS:
         for stem, render in (

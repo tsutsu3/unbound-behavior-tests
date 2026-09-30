@@ -28,4 +28,4 @@ expect:
   answer_contains: ["CNAME host.example.com."]
   note:
     en: "The man page says so, but it is written under redirect, far from where you would look when writing a CNAME into a static zone. host.example.com.'s A, a few lines away in the same zone, is not added. Stub resolvers that do not chase CNAMEs themselves get no address"
-    ja: "man に書いてあるが、書いてあるのは redirect の項で、static ゾーンに CNAME を書くときに読む場所ではない。同じゾーンの数行下にある host.example.com. の A も付かない。CNAME を自分で追わないスタブリゾルバはアドレスを得られない"
+    ja: "man に書いてあるが、書いてあるのは redirect の項で、static ゾーンに CNAME を書くときに読む場所ではない。同じゾーンの数行下にある host.example.com. の A も付かない。CNAME を自分で追わないスタブリゾルバーはアドレスを得られない"

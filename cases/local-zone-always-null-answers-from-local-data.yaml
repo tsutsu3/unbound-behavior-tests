@@ -1,7 +1,7 @@
 id: local-zone-always-null-answers-from-local-data
 title:
   en: "always_null answers from local-data when the name and type match, despite the manual saying it ignores local data"
-  ja: always_null は、名前と型が一致する local-data があるとそれで答える。man は local data を無視すると書く
+  ja: always_null は、名前と型が一致する local-data があるとそれで答える
 chapter: "5.3"
 category: B
 versions: ["1.26.0"]
