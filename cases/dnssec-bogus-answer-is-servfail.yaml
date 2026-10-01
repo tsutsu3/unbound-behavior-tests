@@ -1,0 +1,53 @@
+id: dnssec-bogus-answer-is-servfail
+title:
+  en: "An answer whose signature does not verify is withheld and the client gets SERVFAIL"
+  ja: "署名を検証できない答えはクライアントへ渡されず、SERVFAIL になる"
+chapter: "8.3"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "services/mesh.c mesh_send_reply(): when validation is needed and the query has no CD bit (or ignore-cd-flag is set), a reply whose security is bogus or below is turned into SERVFAIL"
+  ja: "services/mesh.c mesh_send_reply(): 検証が必要で、問い合わせに CD ビットがない（または ignore-cd-flag が有効な）とき、security が bogus 以下の応答を SERVFAIL にする"
+manual:
+  en: "doc/unbound.conf.rst val-permissive-mode: ... the reply is not withheld from the client with SERVFAIL as usual. (the usual case is stated only here, in passing)"
+  ja: "doc/unbound.conf.rst val-permissive-mode の項: ... the reply is not withheld from the client with SERVFAIL as usual.（通常の扱いは、この項がついでに述べているだけ）"
+layers:
+  en:
+  - "validation"
+  - "reply to the client"
+  ja:
+  - "検証"
+  - "クライアントへの応答"
+status: verified
+config: |
+  trust-anchor: "signed.example. DS 51548 13 2 338518751d573ad799ca16bbc79f428dcbc5e4cf8ffb6a253cf088482f057b32"
+  stub-zone:
+    name: "signed.example."
+    stub-addr: 127.0.0.1@5804
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5804"
+    replies:
+    - qname: "signed.example."
+      qtype: DNSKEY
+      aa: true
+      answer:
+      - "signed.example. 300 IN DNSKEY 257 3 13 /KqfUo9VrjZWU0aj9EC7KIUgL2SyGAgt 2jD+wX0dwXELX8XnB4YoRriV7nrUQH/Q QE8s/RTdWA2qt8E7fThZgA=="
+      - "signed.example. 300 IN RRSIG DNSKEY 13 2 300 20460901000000 20260901000000 51548 signed.example. O/yTTEPP6UEM9Ba/KofSx6oHThyjBvrd XgFz0K6/dpp5TiSgjPky+BUaLkN4dVQw PVKK8hVT+mW5DZZvMn1pFw=="
+    - qname: "bad.signed.example."
+      qtype: A
+      aa: true
+      answer:
+      - "bad.signed.example. 300 IN A 192.0.2.99"
+      - "bad.signed.example. 300 IN RRSIG A 13 3 300 20460901000000 20260901000000 51548 signed.example. fQDZqd6obmGaCQnf8re2XKol6tOFCN4v WfDk2vBy1wMVpq30BpCnHWiWnN/d23CN M1wY6G+vl6o+e6XV3E10Ug=="
+    received_contains:
+    - "bad.signed.example. A"
+  query: "bad.signed.example. A"
+  rcode: "SERVFAIL"
+  answer_count: 0
+  note:
+    en: "Category undecided: the result matches the manual. The fake server serves 192.0.2.99 with a signature made for 192.0.2.81. Compare dnssec-bogus-answer-returned-with-cd"
+    ja: "分類 undecided: man の記述どおり。偽の権威 DNS サーバーは、192.0.2.81 に対して作った署名を付けて 192.0.2.99 を返す。dnssec-bogus-answer-returned-with-cd と比べる"

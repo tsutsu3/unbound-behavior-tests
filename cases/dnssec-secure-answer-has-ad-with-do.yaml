@@ -1,0 +1,60 @@
+id: dnssec-secure-answer-has-ad-with-do
+title:
+  en: "A secure answer carries the AD bit and its RRSIG when the query has the DO bit"
+  ja: "問い合わせに DO ビットがあれば、secure の応答には AD ビットと RRSIG が付く"
+chapter: "8.3"
+category: A
+versions:
+- "1.26.0"
+source:
+  en: "util/data/msgencode.c reply_info_answer_encode(): BIT_AD is set only when the reply is secure and the query had the DO bit or the AD bit (secure && (dnssec || (qflags&BIT_AD)))"
+  ja: "util/data/msgencode.c reply_info_answer_encode(): 応答が secure で、問い合わせに DO ビットか AD ビットがあるときだけ BIT_AD を立てる（secure && (dnssec || (qflags&BIT_AD))）"
+manual:
+  en: "none (unbound.conf does not say when the AD bit is set in a reply)"
+  ja: "none（unbound.conf は応答に AD ビットを立てる条件を書いていない）"
+layers:
+  en:
+  - "validation"
+  - "reply flags"
+  ja:
+  - "検証"
+  - "応答のフラグ"
+status: verified
+config: |
+  trust-anchor: "signed.example. DS 51548 13 2 338518751d573ad799ca16bbc79f428dcbc5e4cf8ffb6a253cf088482f057b32"
+  stub-zone:
+    name: "signed.example."
+    stub-addr: 127.0.0.1@5801
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5801"
+    replies:
+    - qname: "signed.example."
+      qtype: DNSKEY
+      aa: true
+      answer:
+      - "signed.example. 300 IN DNSKEY 257 3 13 /KqfUo9VrjZWU0aj9EC7KIUgL2SyGAgt 2jD+wX0dwXELX8XnB4YoRriV7nrUQH/Q QE8s/RTdWA2qt8E7fThZgA=="
+      - "signed.example. 300 IN RRSIG DNSKEY 13 2 300 20460901000000 20260901000000 51548 signed.example. O/yTTEPP6UEM9Ba/KofSx6oHThyjBvrd XgFz0K6/dpp5TiSgjPky+BUaLkN4dVQw PVKK8hVT+mW5DZZvMn1pFw=="
+    - qname: "www.signed.example."
+      qtype: A
+      aa: true
+      answer:
+      - "www.signed.example. 300 IN A 192.0.2.80"
+      - "www.signed.example. 300 IN RRSIG A 13 3 300 20460901000000 20260901000000 51548 signed.example. DxKXzctz36wDkmandl0ieplyQfYDGrxs TxQ/Ame/oA/3Yj5ogwCx7s3ajK3G/eQ6 ZX05grsK3sVufhVqwiQIhw=="
+    received_contains:
+    - "signed.example. DNSKEY"
+    - "www.signed.example. A"
+  query: "www.signed.example. A"
+  query_flags:
+  - do
+  rcode: "NOERROR"
+  answer_contains:
+  - "www.signed.example. 300 IN A 192.0.2.80"
+  - "www.signed.example. 300 IN RRSIG A 13 3 300"
+  flags_contains:
+  - ad
+  note:
+    en: "The fake server answers with records pre-signed by a test key (tools/sign_fixtures.py); the zone signed.example. is its own trust anchor. Compare dnssec-secure-answer-has-ad-with-ad-query and dnssec-secure-answer-no-ad-without-do-or-ad"
+    ja: "偽の権威 DNS サーバーは、テスト用の鍵で事前に署名した RR を返す（tools/sign_fixtures.py）。signed.example. のゾーン自身を信頼アンカーにしている。dnssec-secure-answer-has-ad-with-ad-query、dnssec-secure-answer-no-ad-without-do-or-ad と比べる"

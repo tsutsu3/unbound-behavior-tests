@@ -1,0 +1,68 @@
+id: dnssec-internal-zone-nxdomain-at-public-parent
+title:
+  en: "When the public parent answers the DS query for the internal zone with a signed NXDOMAIN, the unsigned internal answer is SERVFAIL"
+  ja: "公開側の親が内部ゾーンの DS の問い合わせに署名付きの NXDOMAIN を返すと、署名のない内部の答えは SERVFAIL になる"
+chapter: "8.5"
+category: A
+versions:
+- "1.26.0"
+source:
+  en: "iterator/iterator.c forward_request() strips one label for a DS query, so the DS of a forwarded zone is asked at the parent. validator/validator.c ds_response_to_ke(): for a name error, val_nsec_prove_nodata_dsreply() accepts only an NSEC at the name or an empty non-terminal proof; an NSEC that proves the name does not exist is neither, so the DS response is bogus"
+  ja: "iterator/iterator.c forward_request() は DS の問い合わせでラベルを1つ落とすので、転送しているゾーンの DS は親へ問い合わせる。validator/validator.c ds_response_to_ke(): name error のとき、val_nsec_prove_nodata_dsreply() が受け入れるのはその名前の NSEC か空の非終端の証明だけ。名前が存在しないことを示す NSEC はどちらでもないので、DS の応答は bogus になる"
+manual:
+  en: "none (domain-insecure describes the case where a DS exists externally, not the case where the name does not exist externally)"
+  ja: "none（domain-insecure の項は外部に DS がある場合を書くが、外部にその名前がない場合は書いていない）"
+layers:
+  en:
+  - "forward decision"
+  - "chain of trust (DS lookup at the parent)"
+  - "validation"
+  ja:
+  - "転送の判定"
+  - "信頼の連鎖（親への DS の問い合わせ）"
+  - "検証"
+status: verified
+config: |
+  trust-anchor: "example. DS 61329 13 2 1bc504f7c451088bacfb6beecb82e3ecd4e736abf54b5a992ce62412ee796303"
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5821
+  forward-zone:
+    name: "corp.example."
+    forward-addr: 127.0.0.1@5822
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5821"
+    replies:
+    - qname: "example."
+      qtype: DNSKEY
+      aa: true
+      answer:
+      - "example. 300 IN DNSKEY 257 3 13 J7LPdwb2le8NazjJx4GhDyVr6b1hPbMi +xG6zzfROqM4k3r82dbZ+1/WSnEUmz/a NWXGdRh32ZkiBjRFPKB12A=="
+      - "example. 300 IN RRSIG DNSKEY 13 1 300 20460901000000 20260901000000 61329 example. Y0CL52dE69y69BISNO+9OgzTU51C5ZS5 b1svuiczxUL6S/1lPJFgMj5r/jWYy5+Z aXzSBIguRkLFQ2drcvBq4A=="
+    - qname: "corp.example."
+      qtype: DS
+      rcode: NXDOMAIN
+      aa: true
+      authority:
+      - "example. 300 IN SOA ns.example. host.example. 1 3600 900 604800 300"
+      - "example. 300 IN RRSIG SOA 13 1 300 20460901000000 20260901000000 61329 example. xuOuzbsWK42wawOBLIyv7Dz0nehdLjWH JEteTfGHGMjrljXwsb+vq8tA4uSFpSJr AjRlAR0y3gxGELYP9U012w=="
+      - "example. 300 IN NSEC example. NS SOA RRSIG NSEC DNSKEY"
+      - "example. 300 IN RRSIG NSEC 13 1 300 20460901000000 20260901000000 61329 example. I8+d6QWXEniGf/0vA8hygkEb9b0yyIWs 3Bx8pK2cs2CGOKHAsrU/sEpgc5J9zN40 bI3uftYSMF6poswn0woXJA=="
+    received_contains:
+    - "corp.example. DS"
+  - addr: "127.0.0.1:5822"
+    replies:
+    - qname: "www.corp.example."
+      qtype: A
+      answer:
+      - "www.corp.example. 300 IN A 192.0.2.90"
+    - {}
+  query: "www.corp.example. A"
+  rcode: "SERVFAIL"
+  answer_count: 0
+  note:
+    en: "The public parent example. (stub-zone, signed, trust anchor) and the internal corp.example. (forward-zone, unsigned) are two fake servers. The parent's NXDOMAIN carries SOA and the apex NSEC (example. NSEC example.), both signed. This is an internal-only name under a signed public zone"
+    ja: "公開側の親 example.（stub-zone、署名あり、信頼アンカー）と、内部の corp.example.（forward-zone、署名なし）は別々の偽のサーバー。親の NXDOMAIN は SOA と頂点の NSEC（example. NSEC example.）を署名付きで含む。署名された公開ゾーンの下に、内部にしかない名前を置いた構成にあたる"

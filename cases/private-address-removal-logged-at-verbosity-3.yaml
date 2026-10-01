@@ -1,0 +1,45 @@
+id: private-address-removal-logged-at-verbosity-3
+title:
+  en: "At verbosity 3, each address removed by private-address is logged with the RRset name and the address"
+  ja: "verbosity 3 では、private-address が取り除いたアドレスごとに、RRset の名前とアドレスがログに出る"
+chapter: "7.3"
+category: A
+versions:
+- "1.26.0"
+source:
+  en: "iterator/iter_priv.c priv_rrset_bad() calls util/data/msgparse.c msgparse_rrset_remove_rr() with \"sanitize: removing public name with private address\", which logs at VERB_QUERY through util/net_help.c log_name_addr() (\"<name> address#port\")"
+  ja: "iterator/iter_priv.c priv_rrset_bad() は \"sanitize: removing public name with private address\" を付けて util/data/msgparse.c msgparse_rrset_remove_rr() を呼び、VERB_QUERY で util/net_help.c log_name_addr()（\"<名前> アドレス#ポート\"）を通してログに書く"
+manual:
+  en: "none (private-address does not mention any log line)"
+  ja: "none（private-address の項はログに触れていない）"
+layers:
+  en:
+  - "response scrubbing"
+  - "logging"
+  ja:
+  - "応答の洗浄"
+  - "ログ"
+status: verified
+config: |
+  verbosity: 3
+  private-address: 192.168.0.0/16
+  forward-zone:
+    name: "corp.example."
+    forward-addr: 127.0.0.1@5841
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5841"
+    replies:
+    - qname: "host.corp.example."
+      qtype: A
+      answer:
+      - "host.corp.example. 300 IN A 192.168.1.10"
+  query: "host.corp.example. A"
+  rcode: "NOERROR"
+  answer_count: 0
+  stderr_contains: "sanitize: removing public name with private address <host.corp.example.> 192.168.1.10#53"
+  note:
+    en: "The #53 after the address is not a port that was used: priv_rrset_bad() fills in the default DNS port to print the address"
+    ja: "アドレスの後ろの #53 は使われたポートではない。priv_rrset_bad() がアドレスを表示するために既定の DNS のポートを入れている"

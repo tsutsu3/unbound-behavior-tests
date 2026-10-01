@@ -1,0 +1,48 @@
+id: forward-tls-upstream-wrong-name-fails-handshake
+title:
+  en: "With a #name that is not in the certificate, the handshake fails, the query is SERVFAIL, and the failure is logged at verbosity 1"
+  ja: "#name が証明書にない名前だと、ハンドシェイクは失敗して問い合わせは SERVFAIL になり、失敗は verbosity 1 でもログに出る"
+chapter: "7.4"
+category: A
+versions:
+- "1.26.0"
+source:
+  en: "util/net_help.c set_auth_name_on_ssl() sets the expected host name and SSL_VERIFY_PEER on the connection; util/netevent.c ssl_handshake() logs \"ssl handshake failed\" with log_crypto_err_io_code() and, when the verify result is not X509_V_OK, \"ssl handshake cert error: ...\" with log_err()"
+  ja: "util/net_help.c set_auth_name_on_ssl() は接続に期待するホスト名と SSL_VERIFY_PEER を設定する。util/netevent.c ssl_handshake() は log_crypto_err_io_code() で \"ssl handshake failed\" を書き、検証結果が X509_V_OK でなければ log_err() で \"ssl handshake cert error: ...\" を書く"
+manual:
+  en: "none (forward-addr says the certificate is checked against the auth name, but not what the client gets or what is logged when it does not match)"
+  ja: "none（forward-addr の項は証明書を auth name と照合すると書くが、一致しないときにクライアントへ返るものとログは書いていない）"
+layers:
+  en:
+  - "upstream TLS handshake"
+  - "certificate verification"
+  ja:
+  - "上流への TLS のハンドシェイク"
+  - "証明書の検証"
+status: verified
+config: |
+  tls-cert-bundle: "harness-ca.pem"
+  forward-zone:
+    name: "."
+    forward-tls-upstream: yes
+    forward-addr: 127.0.0.1@5832#other.example.net
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5832"
+    proto: tcp
+    tls:
+      name: "dot.example.net"
+    replies:
+    - qname: "www.example.com."
+      qtype: A
+      answer:
+      - "www.example.com. 300 IN A 192.0.2.10"
+    tls_handshake: "failed"
+  query: "www.example.com. A"
+  rcode: "SERVFAIL"
+  stderr_contains: "ssl handshake cert error"
+  note:
+    en: "The fake forwarder terminates TLS with a certificate for dot.example.net issued by a CA made for this run (harness-ca.pem), while the config asks for other.example.net"
+    ja: "偽の転送先は、この実行のために作った CA（harness-ca.pem）が発行した dot.example.net の証明書で TLS を終端する。設定は other.example.net を求めている"

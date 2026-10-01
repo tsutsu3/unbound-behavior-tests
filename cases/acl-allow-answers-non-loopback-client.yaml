@@ -1,0 +1,37 @@
+id: acl-allow-answers-non-loopback-client
+title:
+  en: "With access-control allow for its network, the same non-loopback client gets an answer"
+  ja: "そのネットワークに access-control の allow を書くと、同じループバック以外のクライアントに答えが返る"
+chapter: "7.1"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "daemon/acl_list.c acl_addr_lookup() returns the configured allow for the source address, and daemon/worker.c worker_handle_request() goes on to local_zones_answer()"
+  ja: "daemon/acl_list.c acl_addr_lookup() は送信元アドレスに設定の allow を返し、daemon/worker.c worker_handle_request() は local_zones_answer() へ進む"
+manual:
+  en: "doc/unbound.conf.rst access-control: The most specific netblock match is used, if none match refuse is used."
+  ja: "doc/unbound.conf.rst access-control の項: The most specific netblock match is used, if none match refuse is used."
+layers:
+  en:
+  - "access control"
+  ja:
+  - "アクセス制御"
+status: verified
+config: |
+  access-control: 10.0.0.0/8 allow
+  access-control: 172.16.0.0/12 allow
+  access-control: 192.168.0.0/16 allow
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  client: non-loopback
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains:
+  - "www.example.com. 3600 IN A 192.0.2.1"
+  note:
+    en: "Category undecided: the result matches the manual. The three private ranges are allowed because the container's address differs between hosts. Control for acl-default-refuses-non-loopback-client"
+    ja: "分類 undecided: man の記述どおり。コンテナのアドレスは環境で変わるので、プライベートの3つの範囲を allow にしている。acl-default-refuses-non-loopback-client の対照"

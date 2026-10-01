@@ -1,0 +1,41 @@
+id: qname-minimisation-sends-one-label-at-a-time
+title:
+  en: "With qname-minimisation at its default, the server of a zone is first asked for one label below the zone with QTYPE A, then one label more at a time"
+  ja: qname-minimisation が既定のままでは、ゾーンの権威 DNS サーバーへまずゾーンの 1 ラベル下を QTYPE A で問い合わせ、1 ラベルずつ伸ばす
+chapter: "7.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c processQueryTargets(): in INIT_MINIMISE_STATE qinfo_out is set to the delegation point with qtype A, and each MINIMISE_STATE pass puts back one more label (labdiff) until the full name is reached; with QTYPE A the last step is the original query"
+  ja: "iterator/iterator.c processQueryTargets(): INIT_MINIMISE_STATE で qinfo_out を委任点の名前と QTYPE A にし、MINIMISE_STATE のたびにラベルを 1 つ戻して（labdiff）元の名前まで伸ばす。QTYPE A では最後の段が元の問い合わせになる"
+manual:
+  en: "doc/unbound.conf.rst qname-minimisation: Send minimum amount of information to upstream servers to enhance privacy. Only send minimum required labels of the QNAME and set QTYPE to A when possible. Best effort approach; full QNAME and original QTYPE will be sent when upstream replies with a RCODE other than NOERROR, except when receiving NXDOMAIN from a DNSSEC signed zone. Default: yes"
+  ja: "doc/unbound.conf.rst qname-minimisation の項: Send minimum amount of information to upstream servers to enhance privacy. Only send minimum required labels of the QNAME and set QTYPE to A when possible. ... Default: yes"
+layers:
+  en: ["outgoing query name (iterator)"]
+  ja: ["送出する問い合わせの名前（iterator）"]
+status: verified
+config: |
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5700
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5700"
+      replies:
+        - qname: "www.a.b.example.com."
+          qtype: A
+          aa: true
+          answer: ["www.a.b.example.com. 300 IN A 192.0.2.20"]
+        - aa: true
+          authority: ["example.com. 300 IN SOA ns.example.com. host.example.com. 1 3600 900 604800 300"]
+      received_first: "b.example.com. A"
+      received_contains: ["b.example.com. A", "a.b.example.com. A", "www.a.b.example.com. A"]
+  query: "www.a.b.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["www.a.b.example.com. 300 IN A 192.0.2.20"]
+  note:
+    en: "The fake server answers the empty non-terminals b.example.com and a.b.example.com with NOERROR and no data. Compare qname-minimisation-no-sends-full-name and qname-minimisation-not-applied-to-forward-zone"
+    ja: "偽の権威 DNS サーバーは空の非終端 b.example.com と a.b.example.com に NOERROR・データなしで答える。qname-minimisation-no-sends-full-name、qname-minimisation-not-applied-to-forward-zone と比べる"

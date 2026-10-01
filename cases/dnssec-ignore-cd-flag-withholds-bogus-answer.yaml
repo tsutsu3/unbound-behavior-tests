@@ -1,0 +1,54 @@
+id: dnssec-ignore-cd-flag-withholds-bogus-answer
+title:
+  en: "With ignore-cd-flag: yes, a bogus answer is SERVFAIL even when the query has the CD bit"
+  ja: "ignore-cd-flag: yes では、問い合わせに CD ビットがあっても bogus の答えは SERVFAIL になる"
+chapter: "8.3"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "services/mesh.c mesh_send_reply(): when validation is needed and the query has no CD bit (or ignore-cd-flag is set), a reply whose security is bogus or below is turned into SERVFAIL"
+  ja: "services/mesh.c mesh_send_reply(): 検証が必要で、問い合わせに CD ビットがない（または ignore-cd-flag が有効な）とき、security が bogus 以下の応答を SERVFAIL にする"
+manual:
+  en: "doc/unbound.conf.rst ignore-cd-flag: Instruct Unbound to ignore the CD flag from clients and refuse to return bogus answers to them. Thus, the CD (Checking Disabled) flag does not disable checking any more."
+  ja: "doc/unbound.conf.rst ignore-cd-flag の項: Instruct Unbound to ignore the CD flag from clients and refuse to return bogus answers to them. Thus, the CD (Checking Disabled) flag does not disable checking any more."
+layers:
+  en:
+  - "validation"
+  - "reply to the client"
+  ja:
+  - "検証"
+  - "クライアントへの応答"
+status: verified
+config: |
+  trust-anchor: "signed.example. DS 51548 13 2 338518751d573ad799ca16bbc79f428dcbc5e4cf8ffb6a253cf088482f057b32"
+  ignore-cd-flag: yes
+  stub-zone:
+    name: "signed.example."
+    stub-addr: 127.0.0.1@5806
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5806"
+    replies:
+    - qname: "signed.example."
+      qtype: DNSKEY
+      aa: true
+      answer:
+      - "signed.example. 300 IN DNSKEY 257 3 13 /KqfUo9VrjZWU0aj9EC7KIUgL2SyGAgt 2jD+wX0dwXELX8XnB4YoRriV7nrUQH/Q QE8s/RTdWA2qt8E7fThZgA=="
+      - "signed.example. 300 IN RRSIG DNSKEY 13 2 300 20460901000000 20260901000000 51548 signed.example. O/yTTEPP6UEM9Ba/KofSx6oHThyjBvrd XgFz0K6/dpp5TiSgjPky+BUaLkN4dVQw PVKK8hVT+mW5DZZvMn1pFw=="
+    - qname: "bad.signed.example."
+      qtype: A
+      aa: true
+      answer:
+      - "bad.signed.example. 300 IN A 192.0.2.99"
+      - "bad.signed.example. 300 IN RRSIG A 13 3 300 20460901000000 20260901000000 51548 signed.example. fQDZqd6obmGaCQnf8re2XKol6tOFCN4v WfDk2vBy1wMVpq30BpCnHWiWnN/d23CN M1wY6G+vl6o+e6XV3E10Ug=="
+  query: "bad.signed.example. A"
+  query_flags:
+  - cd
+  rcode: "SERVFAIL"
+  answer_count: 0
+  note:
+    en: "Category undecided: the result matches the manual. With this option +cd can no longer tell a validation failure from another SERVFAIL"
+    ja: "分類 undecided: man の記述どおり。この設定では、+cd で検証の失敗とほかの SERVFAIL を見分けられなくなる"

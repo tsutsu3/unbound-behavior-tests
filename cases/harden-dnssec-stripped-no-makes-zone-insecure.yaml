@@ -1,0 +1,57 @@
+id: harden-dnssec-stripped-no-makes-zone-insecure
+title:
+  en: "With harden-dnssec-stripped: no, the same zone without a DNSKEY is treated as insecure: the unsigned answer is returned without the AD bit"
+  ja: "harden-dnssec-stripped: no では、DNSKEY を得られない同じゾーンが insecure として扱われ、署名のない答えが AD ビットなしで返る"
+chapter: "8.3"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "validator/validator.c primeResponseToKE(): when the trust anchor's DNSKEY RRset cannot be fetched, harden-dnssec-stripped: yes creates a bad key entry (reason \"no DNSKEY rrset\", EDE DNSKEY Missing), and no creates a null key entry, which makes everything below insecure"
+  ja: "validator/validator.c primeResponseToKE(): 信頼アンカーの DNSKEY RRset を取得できないとき、harden-dnssec-stripped: yes なら bad の key entry（理由 \"no DNSKEY rrset\"、EDE は DNSKEY Missing）を作り、no なら null の key entry を作って配下を insecure にする"
+manual:
+  en: "doc/unbound.conf.rst harden-dnssec-stripped: Require DNSSEC data for trust-anchored zones, if such data is absent, the zone becomes bogus. If turned off, and no DNSSEC data is received (or the DNSKEY data fails to validate), then the zone is made insecure, this behaves like there is no trust anchor. Default: yes"
+  ja: "doc/unbound.conf.rst harden-dnssec-stripped の項: Require DNSSEC data for trust-anchored zones, if such data is absent, the zone becomes bogus. If turned off, and no DNSSEC data is received (or the DNSKEY data fails to validate), then the zone is made insecure, this behaves like there is no trust anchor. Default: yes"
+layers:
+  en:
+  - "trust anchor priming"
+  - "validation"
+  ja:
+  - "信頼アンカーのプライミング"
+  - "検証"
+status: verified
+config: |
+  trust-anchor: "signed.example. DS 51548 13 2 338518751d573ad799ca16bbc79f428dcbc5e4cf8ffb6a253cf088482f057b32"
+  harden-dnssec-stripped: no
+  stub-zone:
+    name: "signed.example."
+    stub-addr: 127.0.0.1@5814
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5814"
+    replies:
+    - qname: "signed.example."
+      qtype: DNSKEY
+      aa: true
+      authority:
+      - "signed.example. 300 IN SOA ns.signed.example. host.signed.example. 1 3600 900 604800 300"
+    - qname: "www.signed.example."
+      qtype: A
+      aa: true
+      answer:
+      - "www.signed.example. 300 IN A 192.0.2.80"
+    received_contains:
+    - "signed.example. DNSKEY"
+  query: "www.signed.example. A"
+  query_flags:
+  - do
+  rcode: "NOERROR"
+  answer_contains:
+  - "www.signed.example. 300 IN A 192.0.2.80"
+  flags_not_contains:
+  - ad
+  note:
+    en: "Category undecided: the result matches the manual. This is the downgrade the manual warns about: whoever can remove the DNSKEY answer turns validation off for the zone"
+    ja: "分類 undecided: man の記述どおり。man が警告するダウングレードにあたる。DNSKEY の応答を取り除ける者は、そのゾーンの検証を止められる"

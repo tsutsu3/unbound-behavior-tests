@@ -1,0 +1,28 @@
+id: local-zone-always-null-other-type-nodata
+title:
+  en: "always_null answers a query for a type other than A and AAAA with NODATA"
+  ja: "always_null は、A と AAAA 以外の型の問い合わせに NODATA を返す"
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zones_zone_answer(): in the local_zone_always_null branch, a qtype A query is answered with 0.0.0.0 and a qtype AAAA query with ::, both built with rr_ttl = 3600; any other qtype falls through to the NOERROR/NODATA reply. The branch is reached only when local_data_answer() found no matching local-data"
+  ja: "services/localzone.c local_zones_zone_answer(): local_zone_always_null の分岐で、qtype が A なら 0.0.0.0、AAAA なら :: を rr_ttl = 3600 で組み立てて返す。ほかの qtype は NOERROR / NODATA の応答へ落ちる。この分岐に来るのは、local_data_answer() が一致する local-data を見つけなかったときだけ"
+manual:
+  en: "none (the always_null entry only speaks of 0.0.0.0 and ::0, not of other types)"
+  ja: "none（always_null の項は 0.0.0.0 と ::0 だけを書き、ほかの型には触れていない）"
+layers:
+  en: ["answer generation per zone type"]
+  ja: ["ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "ads.example.com." always_null
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.ads.example.com. TXT"
+  rcode: "NOERROR"
+  answer_count: 0
+  note:
+    en: "Nothing is sent to an outside server"
+    ja: "外部には問い合わせない"

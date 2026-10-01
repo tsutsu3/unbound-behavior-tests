@@ -1,0 +1,67 @@
+id: dnssec-internal-unsigned-zone-under-public-ds-is-servfail
+title:
+  en: "An unsigned internal zone reached through a forward-zone is SERVFAIL when the public parent publishes a DS for it"
+  ja: "forward-zone で引く署名のない内部ゾーンは、公開側の親がそのゾーンの DS を出していると SERVFAIL になる"
+chapter: "8.5"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "iterator/iterator.c forward_request() strips one label for a DS query, so the DS of a forwarded zone is asked at the parent. validator/validator.c processFindKey() follows the secure DS down to corp.example., cannot get a DNSKEY that matches it, and the answer is bogus"
+  ja: "iterator/iterator.c forward_request() は DS の問い合わせでラベルを1つ落とすので、転送しているゾーンの DS は親へ問い合わせる。validator/validator.c processFindKey() は secure な DS をたどって corp.example. に進み、DS に合う DNSKEY を得られず、答えは bogus になる"
+manual:
+  en: "doc/unbound.conf.rst domain-insecure: Sets <domain name> to be insecure, DNSSEC chain of trust is ignored towards the <domain name>. So a trust anchor above the domain name can not make the domain secure with a DS record, such a DS record is then ignored. ... A DS record externally can create validation failures for that internal domain."
+  ja: "doc/unbound.conf.rst domain-insecure の項: Sets <domain name> to be insecure, DNSSEC chain of trust is ignored towards the <domain name>. So a trust anchor above the domain name can not make the domain secure with a DS record, such a DS record is then ignored. ... A DS record externally can create validation failures for that internal domain."
+layers:
+  en:
+  - "forward decision"
+  - "chain of trust (DS lookup at the parent)"
+  - "validation"
+  ja:
+  - "転送の判定"
+  - "信頼の連鎖（親への DS の問い合わせ）"
+  - "検証"
+status: verified
+config: |
+  trust-anchor: "example. DS 61329 13 2 1bc504f7c451088bacfb6beecb82e3ecd4e736abf54b5a992ce62412ee796303"
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5815
+  forward-zone:
+    name: "corp.example."
+    forward-addr: 127.0.0.1@5816
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5815"
+    replies:
+    - qname: "example."
+      qtype: DNSKEY
+      aa: true
+      answer:
+      - "example. 300 IN DNSKEY 257 3 13 J7LPdwb2le8NazjJx4GhDyVr6b1hPbMi +xG6zzfROqM4k3r82dbZ+1/WSnEUmz/a NWXGdRh32ZkiBjRFPKB12A=="
+      - "example. 300 IN RRSIG DNSKEY 13 1 300 20460901000000 20260901000000 61329 example. Y0CL52dE69y69BISNO+9OgzTU51C5ZS5 b1svuiczxUL6S/1lPJFgMj5r/jWYy5+Z aXzSBIguRkLFQ2drcvBq4A=="
+    - qname: "corp.example."
+      qtype: DS
+      aa: true
+      answer:
+      - "corp.example. 300 IN DS 32308 13 2 ab15475c210915a18634fcc32f9815ac066abadf7c70b94dd4254775c6c0c74f"
+      - "corp.example. 300 IN RRSIG DS 13 2 300 20460901000000 20260901000000 61329 example. UREXmnJtSXQlet+4+LHUx4O/DwRD7NAs FggSLJTLv4PJJ6N471Of7/TXV6JtSjmT Ivm+ayUNg83p3AX0zSKhuw=="
+    received_contains:
+    - "corp.example. DS"
+  - addr: "127.0.0.1:5816"
+    replies:
+    - qname: "www.corp.example."
+      qtype: A
+      answer:
+      - "www.corp.example. 300 IN A 192.0.2.90"
+    - {}
+    received_contains:
+    - "www.corp.example. A"
+  query: "www.corp.example. A"
+  rcode: "SERVFAIL"
+  answer_count: 0
+  note:
+    en: "Category undecided: the result matches the manual. The public parent example. (stub-zone, signed, trust anchor) and the internal corp.example. (forward-zone, unsigned) are two fake servers. Compare dnssec-domain-insecure-lets-internal-unsigned-zone-answer"
+    ja: "分類 undecided: man の記述どおり。公開側の親 example.（stub-zone、署名あり、信頼アンカー）と、内部の corp.example.（forward-zone、署名なし）は別々の偽のサーバー。dnssec-domain-insecure-lets-internal-unsigned-zone-answer と比べる"

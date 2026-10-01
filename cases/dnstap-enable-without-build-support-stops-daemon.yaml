@@ -1,0 +1,28 @@
+id: dnstap-enable-without-build-support-stops-daemon
+title:
+  en: "In a build without dnstap, dnstap-enable: yes passes unbound-checkconf but the daemon exits at start-up"
+  ja: "dnstap を含まないビルドでは、dnstap-enable: yes は unbound-checkconf を通るが、デーモンは起動時に終了する"
+chapter: "7.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "daemon/daemon.c daemon_create_workers(): without USE_DNSTAP, cfg->dnstap makes it call fatal_exit(\"dnstap enabled in config but not built with dnstap support\"). The config parser accepts the dnstap: clause in every build, and smallapp/unbound-checkconf.c has no such check"
+  ja: "daemon/daemon.c daemon_create_workers(): USE_DNSTAP がないとき cfg->dnstap なら fatal_exit(\"dnstap enabled in config but not built with dnstap support\") を呼ぶ。設定のパーサーはどのビルドでも dnstap: 節を受け付け、smallapp/unbound-checkconf.c にはこの検査がない"
+manual:
+  en: "none (the DNSTAP Options section says dnstap has to be compiled in with --enable-dnstap, but not what happens otherwise)"
+  ja: "none（DNSTAP Options の節は --enable-dnstap でのビルドが要ると書くが、そうでないときに何が起きるかは書いていない）"
+layers:
+  en: ["config parse", "daemon start-up"]
+  ja: ["設定の読み込み", "デーモンの起動"]
+status: verified
+config: |
+  dnstap:
+    dnstap-enable: yes
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  starts: false
+  stderr_contains: "fatal error: dnstap enabled in config but not built with dnstap support"
+  note:
+    en: "The harness image is built without --enable-dnstap (see Dockerfile)"
+    ja: "ハーネスのイメージは --enable-dnstap なしでビルドしている（Dockerfile 参照）"

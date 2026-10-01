@@ -1,0 +1,37 @@
+id: qname-minimisation-timeout-falls-back
+title:
+  en: "If minimised queries time out, Unbound gives up minimising and sends the full question"
+  ja: 最小化した問い合わせが時間切れを繰り返すと、Unbound は最小化をやめて元の問い合わせを送る
+chapter: "7.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c processQueryTargets(): in SKIP_MINIMISE_STATE, once timeout_count reaches MAX_MINIMISE_TIMEOUT_COUNT (3, iterator/iterator.h) and qname-minimisation-strict is off, minimisation_state becomes DONOT_MINIMISE_STATE and qinfo_out is the full question"
+  ja: "iterator/iterator.c processQueryTargets(): SKIP_MINIMISE_STATE で timeout_count が MAX_MINIMISE_TIMEOUT_COUNT（3、iterator/iterator.h）に達し、qname-minimisation-strict が無効なら、minimisation_state を DONOT_MINIMISE_STATE にして qinfo_out を元の問い合わせにする"
+manual:
+  en: "none (qname-minimisation describes the fallback on an RCODE other than NOERROR, not on a timeout)"
+  ja: "none（qname-minimisation の項は NOERROR 以外の RCODE でのフォールバックを書くが、時間切れの場合は書いていない）"
+layers:
+  en: ["outgoing query name (iterator)", "minimisation fallback"]
+  ja: ["送出する問い合わせの名前（iterator）", "最小化のフォールバック"]
+status: verified
+config: |
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5708
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5708"
+      replies:
+        - qname: "www.a.b.example.com."
+          qtype: A
+          aa: true
+          answer: ["www.a.b.example.com. 300 IN A 192.0.2.20"]
+      received_first: "b.example.com. A"
+      received_contains: ["b.example.com. A", "www.a.b.example.com. A"]
+  query: "www.a.b.example.com. A"
+  note:
+    en: "The fake server answers only the full name and stays silent for everything else. Observed: b.example.com. A three times, then www.a.b.example.com. A. The three timeouts take longer than the 6 seconds the harness waits for a reply, so the client side is not checked; the case was first written expecting NOERROR within that time, which the run did not confirm"
+    ja: "偽の権威 DNS サーバーは元の名前にだけ答え、ほかには何も返さない。観測では b.example.com. A が3回、その後に www.a.b.example.com. A が届いた。3回の時間切れは、ハーネスが応答を待つ6秒より長くかかるので、クライアント側は判定していない。最初はその時間内に NOERROR が返ると予測して書いたが、実行で確かめられなかった"

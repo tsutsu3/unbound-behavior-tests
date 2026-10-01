@@ -1,0 +1,41 @@
+id: qname-minimisation-strict-refused-on-ent-adds-labels
+title:
+  en: "With qname-minimisation-strict: yes, a REFUSED to a minimised query does not end the lookup: Unbound adds one label at a time and reaches the full name as the normal last step"
+  ja: "qname-minimisation-strict: yes でも、最小化した問い合わせへの REFUSED で名前解決は終わらない。Unbound はラベルを 1 つずつ足し、通常の最後の段として元の名前に届く"
+chapter: "7.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_resptype.c response_type_from_server() makes REFUSED a RESPONSE_TYPE_THROWAWAY, not an ANSWER, so the strict branch of processQueryResponse() (NXDOMAIN final, other RCODEs SERVFAIL) is not reached; under qname-minimisation-strict the minimisation state is kept and processQueryTargets() adds the next label on the next pass"
+  ja: "iterator/iter_resptype.c response_type_from_server() は REFUSED を ANSWER ではなく RESPONSE_TYPE_THROWAWAY にするので、processQueryResponse() の strict の分岐（NXDOMAIN なら終了、それ以外の RCODE なら SERVFAIL）には入らない。qname-minimisation-strict では最小化の状態が保たれ、次の processQueryTargets() でラベルが 1 つ足される"
+manual:
+  en: "doc/unbound.conf.rst qname-minimisation-strict: QNAME minimisation in strict mode. Do not fall-back to sending full QNAME to potentially broken nameservers. A lot of domains will not be resolvable when this option in enabled."
+  ja: "doc/unbound.conf.rst qname-minimisation-strict の項: QNAME minimisation in strict mode. Do not fall-back to sending full QNAME to potentially broken nameservers. A lot of domains will not be resolvable when this option in enabled."
+layers:
+  en: ["outgoing query name (iterator)", "minimisation fallback"]
+  ja: ["送出する問い合わせの名前（iterator）", "最小化のフォールバック"]
+status: verified
+config: |
+  qname-minimisation-strict: yes
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5707
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5707"
+      replies:
+        - qname: "www.a.b.example.com."
+          qtype: A
+          aa: true
+          answer: ["www.a.b.example.com. 300 IN A 192.0.2.20"]
+        - rcode: REFUSED
+      received_first: "b.example.com. A"
+      received_contains: ["b.example.com. A", "a.b.example.com. A", "www.a.b.example.com. A"]
+  query: "www.a.b.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["www.a.b.example.com. 300 IN A 192.0.2.20"]
+  note:
+    en: "Same fake server as qname-minimisation-refused-on-ent-falls-back, which jumps from b.example.com straight to the full name; here, with only qname-minimisation-strict added, a.b.example.com is asked in between. Written first as a prediction of SERVFAIL, which the run did not confirm"
+    ja: "qname-minimisation-refused-on-ent-falls-back と同じ偽の権威 DNS サーバー。あちらは b.example.com から元の名前へ飛ぶが、qname-minimisation-strict だけを足したこちらは間に a.b.example.com を問い合わせる。最初は SERVFAIL と予測して書いたが、実行で確かめられなかった"

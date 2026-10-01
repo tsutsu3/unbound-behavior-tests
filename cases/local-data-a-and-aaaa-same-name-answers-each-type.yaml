@@ -1,0 +1,31 @@
+id: local-data-a-and-aaaa-same-name-answers-each-type
+title:
+  en: "A and AAAA local-data for the same name are kept side by side and the AAAA query gets the AAAA record"
+  ja: "同じ名前に A と AAAA の local-data を書くと両方が残り、AAAA の問い合わせには AAAA が返る"
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zone_enter_rr() -> insert_rr() keeps one rrset per type under the name's local_data node; local_data_answer() picks the rrset of the query type"
+  ja: "services/localzone.c local_zone_enter_rr() → insert_rr() は、名前の local_data ノードの下に型ごとの RRset を持つ。local_data_answer() は問い合わせの型の RRset を選ぶ"
+manual:
+  en: "none (the local-data entry does not say how records of different types for one name are kept)"
+  ja: "none（local-data の項は、同じ名前の型の違うレコードの持ち方を書いていない）"
+layers:
+  en: ["local data answering"]
+  ja: ["local data からの応答"]
+status: verified
+config: |
+  local-zone: "home.arpa." static
+  local-data: "nas.home.arpa. A 192.168.1.10"
+  local-data: "nas.home.arpa. AAAA 2001:db8::10"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "nas.home.arpa. AAAA"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ["nas.home.arpa. 3600 IN AAAA 2001:db8::10"]
+  note:
+    en: "The dual-stack recipe of the book, as written. The A query for the same configuration shape is local-zone-home-arpa-static-answers-local-data"
+    ja: "本書の A と AAAA を並べるレシピの設定をそのまま動かしたもの。同じ形の設定での A の問い合わせは local-zone-home-arpa-static-answers-local-data"

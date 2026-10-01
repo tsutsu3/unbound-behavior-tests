@@ -1,0 +1,31 @@
+id: log-queries-logged-at-verbosity-0
+title:
+  en: "log-queries writes one line per query even at verbosity: 0: source address, name, type and class"
+  ja: "log-queries は verbosity: 0 でも問い合わせ 1 件につき 1 行を書く。問い合わせ元のアドレス、名前、型、クラス"
+chapter: "7.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "daemon/worker.c worker_handle_request() calls util/net_help.c log_query_in() when cfg->log_queries is set, before any verbosity check; log_query_in() writes with log_info()"
+  ja: "daemon/worker.c worker_handle_request() は cfg->log_queries なら verbosity を見ずに util/net_help.c log_query_in() を呼び、log_query_in() は log_info() で書く"
+manual:
+  en: "doc/unbound.conf.rst log-queries: Prints one line per query to the log, with the log timestamp and IP address, name, type and class. (does not say how it relates to verbosity)"
+  ja: "doc/unbound.conf.rst log-queries の項: Prints one line per query to the log, with the log timestamp and IP address, name, type and class.（verbosity との関係は書いていない）"
+layers:
+  en: ["logging"]
+  ja: ["ログ"]
+status: verified
+config: |
+  verbosity: 0
+  log-queries: yes
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  stderr_contains: "info: 127.0.0.1 www.example.com. A IN\n"
+  note:
+    en: "The line starts with the usual [timestamp] unbound[pid:thread] prefix. Compare log-replies-logged-at-verbosity-0"
+    ja: "行の頭には通常の [時刻] unbound[pid:スレッド] が付く。log-replies-logged-at-verbosity-0 と比べる"

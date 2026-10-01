@@ -1,0 +1,29 @@
+id: local-zone-always-nxdomain-ignores-local-data
+title:
+  en: "always_nxdomain answers NXDOMAIN even for a name and type that has local-data"
+  ja: "always_nxdomain は、local-data のある名前と型にも NXDOMAIN を返す"
+chapter: "5.3"
+category: C
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zones_answer() skips local_data_answer() when the zone type is always_nxdomain, and local_zones_zone_answer() then answers NXDOMAIN because no local data was looked up"
+  ja: "services/localzone.c local_zones_answer() は、ゾーンの type が always_nxdomain のとき local_data_answer() を呼ばない。local data を引かないまま local_zones_zone_answer() が NXDOMAIN を返す"
+manual:
+  en: "doc/unbound.conf.rst always_nxdomain: Like static, but ignores local data and returns NXDOMAIN for the query."
+  ja: "doc/unbound.conf.rst always_nxdomain の項: Like static, but ignores local data and returns NXDOMAIN for the query."
+layers:
+  en: ["whether local-data is consulted", "answer generation per zone type"]
+  ja: ["local-data 参照の可否判定", "ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "ads.example.com." always_nxdomain
+  local-data: "www.ads.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.ads.example.com. A"
+  rcode: "NXDOMAIN"
+  answer_count: 0
+  note:
+    en: "The manual and the implementation agree. What is counter-intuitive is that unbound-checkconf accepts the local-data line and it is never returned"
+    ja: "man と実装は一致する。unbound-checkconf が local-data の行を通し、その値が返らない点が直感に反する"

@@ -1,0 +1,51 @@
+id: forward-tls-upstream-ca-without-name-accepts-any-name
+title:
+  en: "With a CA bundle but no #name, a certificate issued by that CA is accepted whatever name it carries"
+  ja: "CA 証明書があって #name がなければ、その CA が発行した証明書は名前にかかわらず受け入れられる"
+chapter: "7.4"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "util/net_help.c connect_sslctx_create() sets SSL_VERIFY_PEER when a CA bundle is given; without #name set_auth_name_on_ssl() is not called, so no host name is checked. util/netevent.c ssl_handshake() logs \"SSL connection authenticated\" when SSL_get0_peername() has no name"
+  ja: "util/net_help.c connect_sslctx_create() は CA 証明書の指定があれば SSL_VERIFY_PEER を立てる。#name がなければ set_auth_name_on_ssl() は呼ばれず、ホスト名は照合されない。util/netevent.c ssl_handshake() は SSL_get0_peername() に名前がないとき \"SSL connection authenticated\" と書く"
+manual:
+  en: "doc/unbound.conf.rst forward-addr: At high verbosity it logs the TLS certificate, with TLS enabled. If you leave out the '#' and auth name from the forward-addr, any name is accepted. The cert must also match a CA from the tls-cert-bundle."
+  ja: "doc/unbound.conf.rst forward-addr の項: At high verbosity it logs the TLS certificate, with TLS enabled. If you leave out the '#' and auth name from the forward-addr, any name is accepted. The cert must also match a CA from the tls-cert-bundle."
+layers:
+  en:
+  - "upstream TLS handshake"
+  - "certificate verification"
+  ja:
+  - "上流への TLS のハンドシェイク"
+  - "証明書の検証"
+status: verified
+config: |
+  verbosity: 4
+  tls-cert-bundle: "harness-ca.pem"
+  forward-zone:
+    name: "."
+    forward-tls-upstream: yes
+    forward-addr: 127.0.0.1@5834
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5834"
+    proto: tcp
+    tls:
+      name: "dot.example.net"
+    replies:
+    - qname: "www.example.com."
+      qtype: A
+      answer:
+      - "www.example.com. 300 IN A 192.0.2.10"
+    tls_handshake: "completed"
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains:
+  - "www.example.com. 300 IN A 192.0.2.10"
+  stderr_contains: "SSL connection authenticated"
+  note:
+    en: "Category undecided: the result matches the manual. Any server holding a certificate from the same CA passes"
+    ja: "分類 undecided: man の記述どおり。同じ CA の証明書を持つサーバーなら、どれでも通る"

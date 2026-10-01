@@ -1,0 +1,34 @@
+id: acl-default-allows-ipv6-loopback
+title:
+  en: "Without any access-control line, a query from ::1 is allowed, although the manual names only 127.0.0.0/8"
+  ja: "access-control を1行も書かなくても、::1 からの問い合わせは許可される。man が挙げるのは 127.0.0.0/8 だけ"
+chapter: "7.1"
+category: B
+versions:
+- "1.26.0"
+source:
+  en: "daemon/acl_list.c acl_list_apply_cfg() adds 0.0.0.0/0 refuse and 127.0.0.0/8 allow, and with do-ip6 also ::0/0 refuse, ::1 allow and ::ffff:127.0.0.1 allow, after the configured entries"
+  ja: "daemon/acl_list.c acl_list_apply_cfg() は、設定の行の後に 0.0.0.0/0 refuse と 127.0.0.0/8 allow を加え、do-ip6 なら ::0/0 refuse、::1 allow、::ffff:127.0.0.1 allow も加える"
+manual:
+  en: "doc/unbound.conf.rst access-control: By default only localhost (the 127.0.0.0/8 IP netblock, not the loopback interface) is implicitly allowed, the rest is refused. The default is refused, because that is protocol-friendly."
+  ja: "doc/unbound.conf.rst access-control の項: By default only localhost (the 127.0.0.0/8 IP netblock, not the loopback interface) is implicitly allowed, the rest is refused. The default is refused, because that is protocol-friendly."
+layers:
+  en:
+  - "access control"
+  ja:
+  - "アクセス制御"
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  client: loopback6
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains:
+  - "www.example.com. 3600 IN A 192.0.2.1"
+  note:
+    en: "The manual says only the 127.0.0.0/8 netblock is implicitly allowed. The harness boilerplate for expect.client has no access-control line and listens on ::1"
+    ja: "man は暗黙に許可されるのを 127.0.0.0/8 のネットブロックだけと書く。expect.client のときのハーネスの定型部には access-control の行がなく、::1 でも待ち受ける"

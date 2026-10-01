@@ -60,7 +60,7 @@ COPY --from=unbound-build /usr/local/sbin/unbound-checkconf /usr/local/sbin/
 COPY --from=unbound-build /usr/local/sbin/unbound-control /usr/local/sbin/
 COPY --from=unbound-build /usr/local/sbin/unbound-control-setup /usr/local/sbin/
 COPY --from=unbound-build /usr/local/sbin/unbound-anchor /usr/local/sbin/
-COPY --from=unbound-build /usr/local/lib/libunbound.so.9* /usr/local/lib/
+COPY --from=unbound-build /usr/local/lib/libunbound.so.8* /usr/local/lib/
 RUN ldconfig && mkdir -p /etc/unbound /var/lib/unbound
 
 ENV PATH="/usr/local/sbin:${PATH}" \

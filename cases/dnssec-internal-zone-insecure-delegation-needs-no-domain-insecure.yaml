@@ -1,0 +1,74 @@
+id: dnssec-internal-zone-insecure-delegation-needs-no-domain-insecure
+title:
+  en: "When the public parent proves with a signed NSEC that the internal zone has no DS, the unsigned answer is returned without domain-insecure"
+  ja: "公開側の親が署名付きの NSEC で内部ゾーンに DS がないことを示していれば、domain-insecure がなくても署名のない答えが返る"
+chapter: "8.5"
+category: A
+versions:
+- "1.26.0"
+source:
+  en: "iterator/iterator.c forward_request() strips one label for a DS query, so the DS of a forwarded zone is asked at the parent. validator/validator.c ds_response_to_ke() -> val_nsec_prove_nodata_dsreply(): an NSEC at the delegation with NS and without DS proves an insecure delegation, a null key entry is made and the answer is insecure"
+  ja: "iterator/iterator.c forward_request() は DS の問い合わせでラベルを1つ落とすので、転送しているゾーンの DS は親へ問い合わせる。validator/validator.c ds_response_to_ke() → val_nsec_prove_nodata_dsreply(): 委任点の NSEC に NS があり DS がなければ insecure な委任と証明され、null の key entry が作られて答えは insecure になる"
+manual:
+  en: "none (domain-insecure describes the case where a DS exists externally, not the case where its absence is proven)"
+  ja: "none（domain-insecure の項は外部に DS がある場合を書くが、DS がないと証明される場合は書いていない）"
+layers:
+  en:
+  - "forward decision"
+  - "chain of trust (DS lookup at the parent)"
+  - "validation"
+  ja:
+  - "転送の判定"
+  - "信頼の連鎖（親への DS の問い合わせ）"
+  - "検証"
+status: verified
+config: |
+  trust-anchor: "example. DS 61329 13 2 1bc504f7c451088bacfb6beecb82e3ecd4e736abf54b5a992ce62412ee796303"
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5819
+  forward-zone:
+    name: "corp.example."
+    forward-addr: 127.0.0.1@5820
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5819"
+    replies:
+    - qname: "example."
+      qtype: DNSKEY
+      aa: true
+      answer:
+      - "example. 300 IN DNSKEY 257 3 13 J7LPdwb2le8NazjJx4GhDyVr6b1hPbMi +xG6zzfROqM4k3r82dbZ+1/WSnEUmz/a NWXGdRh32ZkiBjRFPKB12A=="
+      - "example. 300 IN RRSIG DNSKEY 13 1 300 20460901000000 20260901000000 61329 example. Y0CL52dE69y69BISNO+9OgzTU51C5ZS5 b1svuiczxUL6S/1lPJFgMj5r/jWYy5+Z aXzSBIguRkLFQ2drcvBq4A=="
+    - qname: "corp.example."
+      qtype: DS
+      aa: true
+      authority:
+      - "example. 300 IN SOA ns.example. host.example. 1 3600 900 604800 300"
+      - "example. 300 IN RRSIG SOA 13 1 300 20460901000000 20260901000000 61329 example. xuOuzbsWK42wawOBLIyv7Dz0nehdLjWH JEteTfGHGMjrljXwsb+vq8tA4uSFpSJr AjRlAR0y3gxGELYP9U012w=="
+      - "corp.example. 300 IN NSEC example. NS RRSIG NSEC"
+      - "corp.example. 300 IN RRSIG NSEC 13 2 300 20460901000000 20260901000000 61329 example. pPNWSw0FwAx3lfklAHEsIlmSp76+sRnx L9zm8D6bIBtdkOf3NWRNlkCugiLwQS52 +xYV1uPsHsP7jOGzu5cBeg=="
+    received_contains:
+    - "corp.example. DS"
+  - addr: "127.0.0.1:5820"
+    replies:
+    - qname: "www.corp.example."
+      qtype: A
+      answer:
+      - "www.corp.example. 300 IN A 192.0.2.90"
+    - {}
+    received_contains:
+    - "www.corp.example. A"
+  query: "www.corp.example. A"
+  query_flags:
+  - do
+  rcode: "NOERROR"
+  answer_contains:
+  - "www.corp.example. 300 IN A 192.0.2.90"
+  flags_not_contains:
+  - ad
+  note:
+    en: "The public parent example. (stub-zone, signed, trust anchor) and the internal corp.example. (forward-zone, unsigned) are two fake servers. The parent's answer to the DS query is NOERROR with SOA and the NSEC of corp.example. (NS RRSIG NSEC), both signed"
+    ja: "公開側の親 example.（stub-zone、署名あり、信頼アンカー）と、内部の corp.example.（forward-zone、署名なし）は別々の偽のサーバー。親は DS の問い合わせに NOERROR で、SOA と corp.example. の NSEC（NS RRSIG NSEC）を署名付きで返す"

@@ -1,0 +1,31 @@
+id: log-replies-logged-at-verbosity-0
+title:
+  en: "log-replies writes one line per reply even at verbosity: 0: source address, name, type, class, RCODE, time to resolve, from cache and size"
+  ja: "log-replies は verbosity: 0 でも応答 1 件につき 1 行を書く。問い合わせ元のアドレス、名前、型、クラス、RCODE、解決の時間、キャッシュからか、大きさ"
+chapter: "7.5"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "daemon/worker.c and services/mesh.c call log_reply_info(NO_VERBOSE, ...) when cfg->log_replies is set, so the line is not gated by verbosity"
+  ja: "daemon/worker.c と services/mesh.c は cfg->log_replies なら log_reply_info(NO_VERBOSE, ...) を呼ぶので、行は verbosity で抑えられない"
+manual:
+  en: "doc/unbound.conf.rst log-replies: Prints one line per reply to the log, with the log timestamp and IP address, name, type, class, return code, time to resolve, from cache and response size. (does not say how it relates to verbosity)"
+  ja: "doc/unbound.conf.rst log-replies の項: Prints one line per reply to the log, with the log timestamp and IP address, name, type, class, return code, time to resolve, from cache and response size.（verbosity との関係は書いていない）"
+layers:
+  en: ["logging"]
+  ja: ["ログ"]
+status: verified
+config: |
+  verbosity: 0
+  log-replies: yes
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  stderr_contains: "info: 127.0.0.1 www.example.com. A IN NOERROR 0.000000 1 "
+  note:
+    en: "The last field is the response size, which depends on the query (EDNS or not), so it is left out of the check. 0.000000 is the time to resolve and 1 means from cache (a local-data answer counts as one)"
+    ja: "最後の欄は応答の大きさで、問い合わせ（EDNS の有無）で変わるので判定から外している。0.000000 は解決の時間、1 はキャッシュから（local-data の答えも 1 になる）"

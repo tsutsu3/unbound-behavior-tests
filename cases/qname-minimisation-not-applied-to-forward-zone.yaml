@@ -1,0 +1,38 @@
+id: qname-minimisation-not-applied-to-forward-zone
+title:
+  en: "QNAME minimisation is not applied to queries sent to a forward-zone: the forwarder receives the full name and the original QTYPE"
+  ja: forward-zone の転送先へ送る問い合わせには QNAME minimisation がかからず、元の名前と元の QTYPE が届く
+chapter: "7.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c processQueryTargets(): INIT_MINIMISE_STATE is entered only when !(iq->chase_flags & BIT_RD), and forward_request() sets BIT_RD for a forward zone, so qinfo_out stays the full question"
+  ja: "iterator/iterator.c processQueryTargets(): INIT_MINIMISE_STATE に入るのは !(iq->chase_flags & BIT_RD) のときだけで、forward_request() が forward zone では BIT_RD を立てるので、qinfo_out は元の問い合わせのまま"
+manual:
+  en: "doc/unbound.conf.rst qname-minimisation: Send minimum amount of information to upstream servers to enhance privacy. (does not say forwarders are excluded)"
+  ja: "doc/unbound.conf.rst qname-minimisation の項: Send minimum amount of information to upstream servers to enhance privacy.（転送先を除くとは書いていない）"
+layers:
+  en: ["forward decision", "outgoing query name (iterator)"]
+  ja: ["転送の判定", "送出する問い合わせの名前（iterator）"]
+status: verified
+config: |
+  forward-zone:
+    name: "example.com."
+    forward-addr: 127.0.0.1@5703
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5703"
+      replies:
+        - qname: "www.a.b.example.com."
+          qtype: AAAA
+          answer: ["www.a.b.example.com. 300 IN AAAA 2001:db8::20"]
+      received_first: "www.a.b.example.com. AAAA"
+      received_rd: true
+  query: "www.a.b.example.com. AAAA"
+  rcode: "NOERROR"
+  answer_contains: ["www.a.b.example.com. 300 IN AAAA 2001:db8::20"]
+  note:
+    en: "qname-minimisation is left at its default (yes). Compare qname-minimisation-sends-one-label-at-a-time"
+    ja: "qname-minimisation は既定（yes）のまま。qname-minimisation-sends-one-label-at-a-time と比べる"

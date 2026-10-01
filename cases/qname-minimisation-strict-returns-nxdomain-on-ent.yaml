@@ -1,0 +1,41 @@
+id: qname-minimisation-strict-returns-nxdomain-on-ent
+title:
+  en: "With qname-minimisation-strict: yes, an NXDOMAIN to a minimised query is returned to the client as the final answer"
+  ja: "qname-minimisation-strict: yes では、最小化した問い合わせへの NXDOMAIN がそのままクライアントへの答えになる"
+chapter: "7.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c processQueryResponse(): with qname_minimisation_strict, a non-NOERROR ANSWER-type response while minimising ends the query: NXDOMAIN goes to final_state() after iter_scrub_nxdomain(), any other RCODE becomes SERVFAIL"
+  ja: "iterator/iterator.c processQueryResponse(): qname_minimisation_strict では、最小化中に NOERROR 以外の ANSWER 型の応答を受けると問い合わせを終える。NXDOMAIN は iter_scrub_nxdomain() の後に final_state() へ、それ以外の RCODE は SERVFAIL になる"
+manual:
+  en: "doc/unbound.conf.rst qname-minimisation-strict: QNAME minimisation in strict mode. Do not fall-back to sending full QNAME to potentially broken nameservers. A lot of domains will not be resolvable when this option in enabled. Only use if you know what you are doing. This option only has effect when qname-minimisation is enabled. Default: no"
+  ja: "doc/unbound.conf.rst qname-minimisation-strict の項: QNAME minimisation in strict mode. Do not fall-back to sending full QNAME to potentially broken nameservers. ... Default: no"
+layers:
+  en: ["outgoing query name (iterator)", "minimisation fallback"]
+  ja: ["送出する問い合わせの名前（iterator）", "最小化のフォールバック"]
+status: verified
+config: |
+  qname-minimisation-strict: yes
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5705
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5705"
+      replies:
+        - qname: "www.a.b.example.com."
+          qtype: A
+          aa: true
+          answer: ["www.a.b.example.com. 300 IN A 192.0.2.20"]
+        - aa: true
+          rcode: NXDOMAIN
+          authority: ["example.com. 300 IN SOA ns.example.com. host.example.com. 1 3600 900 604800 300"]
+      received_first: "b.example.com. A"
+  query: "www.a.b.example.com. A"
+  rcode: "NXDOMAIN"
+  note:
+    en: "Same fake server as qname-minimisation-nxdomain-on-ent-falls-back; only qname-minimisation-strict differs"
+    ja: "qname-minimisation-nxdomain-on-ent-falls-back と同じ偽の権威 DNS サーバーで、qname-minimisation-strict だけが違う"

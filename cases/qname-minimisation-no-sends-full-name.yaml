@@ -1,0 +1,41 @@
+id: qname-minimisation-no-sends-full-name
+title:
+  en: "With qname-minimisation: no, the first query to the server of a zone carries the full name and the original QTYPE"
+  ja: "qname-minimisation: no では、ゾーンの権威 DNS サーバーへ最初から元の名前と元の QTYPE を送る"
+chapter: "7.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c iter_new() sets minimisation_state to DONOT_MINIMISE_STATE when qname_minimisation is off, and processQueryTargets() then copies qchase into qinfo_out"
+  ja: "iterator/iterator.c iter_new() は qname_minimisation が無効なら minimisation_state を DONOT_MINIMISE_STATE にし、processQueryTargets() は qchase をそのまま qinfo_out にする"
+manual:
+  en: "doc/unbound.conf.rst qname-minimisation: Send minimum amount of information to upstream servers to enhance privacy. Default: yes"
+  ja: "doc/unbound.conf.rst qname-minimisation の項: Send minimum amount of information to upstream servers to enhance privacy. Default: yes"
+layers:
+  en: ["outgoing query name (iterator)"]
+  ja: ["送出する問い合わせの名前（iterator）"]
+status: verified
+config: |
+  qname-minimisation: no
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5701
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5701"
+      replies:
+        - qname: "www.a.b.example.com."
+          qtype: AAAA
+          aa: true
+          answer: ["www.a.b.example.com. 300 IN AAAA 2001:db8::20"]
+        - aa: true
+          authority: ["example.com. 300 IN SOA ns.example.com. host.example.com. 1 3600 900 604800 300"]
+      received_first: "www.a.b.example.com. AAAA"
+  query: "www.a.b.example.com. AAAA"
+  rcode: "NOERROR"
+  answer_contains: ["www.a.b.example.com. 300 IN AAAA 2001:db8::20"]
+  note:
+    en: "Control for qname-minimisation-sends-one-label-at-a-time and qname-minimisation-aaaa-asks-a-at-full-name-first"
+    ja: "qname-minimisation-sends-one-label-at-a-time、qname-minimisation-aaaa-asks-a-at-full-name-first の対照"

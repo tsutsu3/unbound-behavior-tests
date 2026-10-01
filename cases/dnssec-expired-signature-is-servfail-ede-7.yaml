@@ -1,0 +1,52 @@
+id: dnssec-expired-signature-is-servfail-ede-7
+title:
+  en: "An answer whose only signature has expired is SERVFAIL with EDE 7 (Signature Expired)"
+  ja: "期限切れの署名しかない答えは SERVFAIL になり、EDE 7（Signature Expired）が付く"
+chapter: "8.5"
+category: A
+versions:
+- "1.26.0"
+source:
+  en: "validator/val_sigcrypt.c check_dates() fails a signature whose expiration is in the past with reason \"signature expired\" and sets LDNS_EDE_SIGNATURE_EXPIRED"
+  ja: "validator/val_sigcrypt.c check_dates() は、有効期限が過去の署名を \"signature expired\" の理由で失敗させ、LDNS_EDE_SIGNATURE_EXPIRED を設定する"
+manual:
+  en: "none (the ede entry does not list which codes Unbound returns)"
+  ja: "none（ede の項は、Unbound がどのコードを返すかを挙げていない）"
+layers:
+  en:
+  - "validation"
+  - "Extended DNS Errors"
+  ja:
+  - "検証"
+  - "Extended DNS Errors"
+status: verified
+config: |
+  trust-anchor: "signed.example. DS 51548 13 2 338518751d573ad799ca16bbc79f428dcbc5e4cf8ffb6a253cf088482f057b32"
+  ede: yes
+  stub-zone:
+    name: "signed.example."
+    stub-addr: 127.0.0.1@5811
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5811"
+    replies:
+    - qname: "signed.example."
+      qtype: DNSKEY
+      aa: true
+      answer:
+      - "signed.example. 300 IN DNSKEY 257 3 13 /KqfUo9VrjZWU0aj9EC7KIUgL2SyGAgt 2jD+wX0dwXELX8XnB4YoRriV7nrUQH/Q QE8s/RTdWA2qt8E7fThZgA=="
+      - "signed.example. 300 IN RRSIG DNSKEY 13 2 300 20460901000000 20260901000000 51548 signed.example. O/yTTEPP6UEM9Ba/KofSx6oHThyjBvrd XgFz0K6/dpp5TiSgjPky+BUaLkN4dVQw PVKK8hVT+mW5DZZvMn1pFw=="
+    - qname: "expired.signed.example."
+      qtype: A
+      aa: true
+      answer:
+      - "expired.signed.example. 300 IN A 192.0.2.82"
+      - "expired.signed.example. 300 IN RRSIG A 13 3 300 20200201000000 20200101000000 51548 signed.example. IB8SqTtIdGDV04xx5TOp5BQAqVARqU5Y IzqNTZfkPNwUXdV7jpEQo9B/Okqd3a9R soY5/UMUdPUi/9eKUUoyHg=="
+  query: "expired.signed.example. A"
+  rcode: "SERVFAIL"
+  ede_code: 7
+  note:
+    en: "The signature covers 2020-01-01 to 2020-02-01 and is otherwise correct"
+    ja: "署名の有効期間は 2020-01-01 から 2020-02-01 で、それ以外は正しい"

@@ -1,0 +1,57 @@
+id: domain-insecure-overridden-by-trust-anchor
+title:
+  en: "A trust-anchor for the same name overrides domain-insecure: the zone is validated and a secure answer carries the AD bit"
+  ja: "同じ名前に trust-anchor を書くと domain-insecure より優先され、ゾーンは検証されて secure の答えに AD ビットが付く"
+chapter: "8.5"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "validator/val_anchor.c anchors_apply_cfg() enters domain-insecure names first (anchor_insert_insecure()) and then the trust-anchor strings, which add keys to the same anchor; an anchor with keys is a normal trust anchor"
+  ja: "validator/val_anchor.c anchors_apply_cfg() は domain-insecure の名前を先に入れ（anchor_insert_insecure()）、その後で trust-anchor の文字列を読んで同じアンカーに鍵を加える。鍵のあるアンカーは通常の信頼アンカーになる"
+manual:
+  en: "doc/unbound.conf.rst domain-insecure: If you set trust anchors for the domain they override this setting (and the domain is secured)."
+  ja: "doc/unbound.conf.rst domain-insecure の項: If you set trust anchors for the domain they override this setting (and the domain is secured)."
+layers:
+  en:
+  - "trust anchor loading order"
+  - "validation"
+  ja:
+  - "信頼アンカーの読み込み順"
+  - "検証"
+status: verified
+config: |
+  trust-anchor: "corp.example. DS 32308 13 2 ab15475c210915a18634fcc32f9815ac066abadf7c70b94dd4254775c6c0c74f"
+  domain-insecure: "corp.example."
+  forward-zone:
+    name: "corp.example."
+    forward-addr: 127.0.0.1@5823
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5823"
+    replies:
+    - qname: "corp.example."
+      qtype: DNSKEY
+      answer:
+      - "corp.example. 300 IN DNSKEY 257 3 13 kgLvGqkU6GIl0hFVCAd8cmHJmXn0/A2n xm2tYsFZhP0HocPlnuANavYvgusFhiN1 v4XyadpbXU8L0HPI1GucWg=="
+      - "corp.example. 300 IN RRSIG DNSKEY 13 2 300 20460901000000 20260901000000 32308 corp.example. XGjcQkINkf19pq8UpCkMDjGHjLG2umht 4vqIV67e6zXNpopso0Gc+1VWREEE09bJ P4sUqUHYSY3ERUtPlTClgQ=="
+    - qname: "www.corp.example."
+      qtype: A
+      answer:
+      - "www.corp.example. 300 IN A 192.0.2.90"
+      - "www.corp.example. 300 IN RRSIG A 13 3 300 20460901000000 20260901000000 32308 corp.example. o3TtRTGlDb/yVD6uRtM8+mo78wpOIkhh oIrz5LS8R+BBMY2I23LSCYfDCA01du48 s6J6+WghHwqsDtCcY4et3Q=="
+    received_contains:
+    - "corp.example. DNSKEY"
+  query: "www.corp.example. A"
+  query_flags:
+  - do
+  rcode: "NOERROR"
+  answer_contains:
+  - "www.corp.example. 300 IN A 192.0.2.90"
+  flags_contains:
+  - ad
+  note:
+    en: "Category undecided: the result matches the manual. With auto-trust-anchor-file instead of trust-anchor the same combination is a configuration error (domain-insecure-with-auto-trust-anchor-is-config-error)"
+    ja: "分類 undecided: man の記述どおり。trust-anchor の代わりに auto-trust-anchor-file を使うと、同じ組み合わせは設定の誤りになる（domain-insecure-with-auto-trust-anchor-is-config-error）"

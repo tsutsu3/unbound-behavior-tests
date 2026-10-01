@@ -1,0 +1,63 @@
+id: dnssec-missing-signature-is-servfail-ede-10
+title:
+  en: "An unsigned answer in a zone under a trust anchor is SERVFAIL with EDE 10 (RRSIGs Missing)"
+  ja: "信頼アンカーの下のゾーンで署名のない答えは SERVFAIL になり、EDE 10（RRSIGs Missing）が付く"
+chapter: "8.5"
+category: A
+versions:
+- "1.26.0"
+source:
+  en: "validator/validator.c processFindKey() / processValidate(): an answer without RRSIGs below a secure key gets errinf_ede(qstate, \"no signatures\", LDNS_EDE_RRSIGS_MISSING) and is bogus"
+  ja: "validator/validator.c processFindKey() / processValidate(): secure な鍵の下で RRSIG のない答えは errinf_ede(qstate, \"no signatures\", LDNS_EDE_RRSIGS_MISSING) で bogus になる"
+manual:
+  en: "none (the ede entry does not list which codes Unbound returns)"
+  ja: "none（ede の項は、Unbound がどのコードを返すかを挙げていない）"
+layers:
+  en:
+  - "validation"
+  - "Extended DNS Errors"
+  ja:
+  - "検証"
+  - "Extended DNS Errors"
+status: verified
+config: |
+  trust-anchor: "signed.example. DS 51548 13 2 338518751d573ad799ca16bbc79f428dcbc5e4cf8ffb6a253cf088482f057b32"
+  ede: yes
+  val-log-level: 2
+  stub-zone:
+    name: "signed.example."
+    stub-addr: 127.0.0.1@5812
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5812"
+    replies:
+    - qname: "signed.example."
+      qtype: DNSKEY
+      aa: true
+      answer:
+      - "signed.example. 300 IN DNSKEY 257 3 13 /KqfUo9VrjZWU0aj9EC7KIUgL2SyGAgt 2jD+wX0dwXELX8XnB4YoRriV7nrUQH/Q QE8s/RTdWA2qt8E7fThZgA=="
+      - "signed.example. 300 IN RRSIG DNSKEY 13 2 300 20460901000000 20260901000000 51548 signed.example. O/yTTEPP6UEM9Ba/KofSx6oHThyjBvrd XgFz0K6/dpp5TiSgjPky+BUaLkN4dVQw PVKK8hVT+mW5DZZvMn1pFw=="
+    - qname: "www.signed.example."
+      qtype: A
+      aa: true
+      answer:
+      - "www.signed.example. 300 IN A 192.0.2.80"
+    - qname: "www.signed.example."
+      qtype: DS
+      aa: true
+      authority:
+      - "signed.example. 300 IN SOA ns.signed.example. host.signed.example. 1 3600 900 604800 300"
+      - "signed.example. 300 IN RRSIG SOA 13 2 300 20460901000000 20260901000000 51548 signed.example. 4qY6PNP2LXHjBqZ2XDpKI1+WGUzqHL+9 y+9v7V1SCNKxlnas81U285ceefqA9Xsp 2T3cAx3rlar6ewH+DfNvkg=="
+      - "www.signed.example. 300 IN NSEC signed.example. A RRSIG NSEC"
+      - "www.signed.example. 300 IN RRSIG NSEC 13 3 300 20460901000000 20260901000000 51548 signed.example. jfWI2kWnB3HBUyu4gfAqt2NcRyRPHJ3n qgUwe1s9VmNe/0rerH+n2WfJZV1F9EjI rL648IJwS07BLTO194B0Tw=="
+    received_contains:
+    - "www.signed.example. DS"
+  query: "www.signed.example. A"
+  rcode: "SERVFAIL"
+  ede_code: 10
+  ede_text_contains: "no signatures"
+  note:
+    en: "The DNSKEY is signed and validates; only the answer has lost its RRSIG, as when something on the path strips signatures. Unbound first asks for the DS of www.signed.example. to see whether the name is an insecure delegation; the signed NSEC says it is not"
+    ja: "DNSKEY は署名されていて検証できる。答えだけが RRSIG を失っている。経路の途中で署名が取り除かれた場合にあたる。Unbound はまず www.signed.example. の DS を問い合わせて insecure な委任かどうかを確かめ、署名付きの NSEC がそうでないことを示す"

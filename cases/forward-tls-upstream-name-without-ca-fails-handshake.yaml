@@ -1,0 +1,47 @@
+id: forward-tls-upstream-name-without-ca-fails-handshake
+title:
+  en: "With #name but no CA bundle, certificate verification is still required, cannot succeed, and the query is SERVFAIL"
+  ja: "#name があって CA 証明書がないと、証明書の検証は求められるが成功できず、問い合わせは SERVFAIL になる"
+chapter: "7.4"
+category: B
+versions:
+- "1.26.0"
+source:
+  en: "util/net_help.c set_auth_name_on_ssl(), called per connection from services/outside_network.c, sets SSL_VERIFY_PEER on the SSL object even though connect_sslctx_create() loaded no CA; with an empty trust store the verification fails and the handshake is aborted"
+  ja: "util/net_help.c set_auth_name_on_ssl() は services/outside_network.c から接続ごとに呼ばれ、connect_sslctx_create() が CA を読み込んでいなくても SSL オブジェクトに SSL_VERIFY_PEER を立てる。信頼する証明書が空なので検証は失敗し、ハンドシェイクは中断される"
+manual:
+  en: "doc/unbound.conf.rst forward-tls-upstream: Enabled or disable whether the queries to this forwarder use TLS for transport. If you enable this, also configure a tls-cert-bundle or use tls-win-cert to load CA certs, otherwise the connections cannot be authenticated. Default: no"
+  ja: "doc/unbound.conf.rst forward-tls-upstream の項: Enabled or disable whether the queries to this forwarder use TLS for transport. If you enable this, also configure a tls-cert-bundle or use tls-win-cert to load CA certs, otherwise the connections cannot be authenticated. Default: no"
+layers:
+  en:
+  - "upstream TLS handshake"
+  - "certificate verification"
+  ja:
+  - "上流への TLS のハンドシェイク"
+  - "証明書の検証"
+status: verified
+config: |
+  forward-zone:
+    name: "."
+    forward-tls-upstream: yes
+    forward-addr: 127.0.0.1@5835#dot.example.net
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5835"
+    proto: tcp
+    tls:
+      name: "dot.example.net"
+    replies:
+    - qname: "www.example.com."
+      qtype: A
+      answer:
+      - "www.example.com. 300 IN A 192.0.2.10"
+    tls_handshake: "failed"
+  query: "www.example.com. A"
+  rcode: "SERVFAIL"
+  stderr_contains: "ssl handshake cert error"
+  note:
+    en: "The manual says that without CA certs the connections cannot be authenticated, which reads as: they work, unauthenticated. With #name they do not work at all. The name in the config matches the certificate"
+    ja: "man は CA 証明書がなければ接続を認証できないと書いており、認証なしで動くと読める。#name があると、接続そのものが成立しない。設定の名前は証明書と一致している"

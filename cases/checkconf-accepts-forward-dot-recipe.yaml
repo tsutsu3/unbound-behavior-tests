@@ -1,0 +1,31 @@
+id: checkconf-accepts-forward-dot-recipe
+title:
+  en: "The DNS-over-TLS forwarding recipe (tls-cert-bundle, forward-tls-upstream and addr@853#name) passes unbound-checkconf"
+  ja: "DoT で転送するレシピの設定（tls-cert-bundle、forward-tls-upstream、addr@853#name）は unbound-checkconf を通る"
+chapter: "6.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "smallapp/unbound-checkconf.c checkconf() parses the config and check_fwd() builds the forward zones with forwards_apply_cfg(); neither opens the tls-cert-bundle file"
+  ja: "smallapp/unbound-checkconf.c checkconf() は設定を読み、check_fwd() が forwards_apply_cfg() で forward zone を組み立てる。どちらも tls-cert-bundle のファイルを開かない"
+manual:
+  en: "none (unbound-checkconf.8 does not say which files it opens)"
+  ja: "none（unbound-checkconf(8) は、どのファイルを開くかを書いていない）"
+layers:
+  en: ["checkconf coverage"]
+  ja: ["checkconf の検査範囲"]
+status: verified
+config: |
+  tls-cert-bundle: "/etc/ssl/certs/ca-certificates.crt"
+  forward-zone:
+    name: "."
+    forward-tls-upstream: yes
+    forward-addr: 192.0.2.1@853#dns.example.net
+    forward-addr: 192.0.2.2@853#dns.example.net
+command: unbound-checkconf
+expect:
+  exit: 0
+  stderr_contains: "unbound-checkconf: no errors in unbound.conf"
+  note:
+    en: "The forward-dot recipe of the book, as written. Only the syntax and the forward zone setup are checked here; that TLS is spoken is forward-tls-upstream-speaks-tls"
+    ja: "本書の DoT のレシピの設定をそのまま通したもの。ここで見ているのは構文と forward zone の組み立てだけで、TLS を話すことは forward-tls-upstream-speaks-tls が見ている"

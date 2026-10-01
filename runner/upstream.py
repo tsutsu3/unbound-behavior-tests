@@ -22,6 +22,7 @@ what arrives is not inspected, only that it arrived here.
 import dataclasses
 import queue
 import socket
+import ssl
 import threading
 from typing import Self
 
@@ -117,15 +118,31 @@ class ServingUpstream:
 
     Over TCP it also keeps the first bytes of every connection, so a case can
     tell a TLS ClientHello (record type 0x16) from plain DNS over TCP (which
-    starts with a two byte length).  A connection that starts with TLS is
-    recorded and closed; nothing here speaks TLS.
+    starts with a two byte length).  Without `tls`, a connection that starts
+    with TLS is recorded and closed.
+
+    With `tls` (a server-side SSLContext from runner.tls) it terminates TLS
+    instead and then serves DNS over the stream, i.e. it is a DoT server.
+    Every handshake is counted as completed or failed; a handshake fails when
+    the client gives up on the certificate, which is the observation the
+    upstream-TLS cases are after.
     """
 
-    def __init__(self, proto: str, addr: str, port: int, replies: list[dict]):
+    def __init__(
+        self,
+        proto: str,
+        addr: str,
+        port: int,
+        replies: list[dict],
+        tls: ssl.SSLContext | None = None,
+    ):
         self.proto = proto
         self.addr = addr
         self.port = port
         self.replies = replies
+        self.tls = tls
+        self.tls_completed = 0
+        self.tls_failed = 0
         self.received: list[Received] = []
         self.first_bytes: list[bytes] = []
         self._lock = threading.Lock()
@@ -225,12 +242,29 @@ class ServingUpstream:
 
     def _handle_tcp(self, conn: socket.socket) -> None:
         conn.settimeout(2.0)
+        proto = "tcp"
         try:
-            head = conn.recv(2)
-            with self._lock:
-                self.first_bytes.append(head)
-            if len(head) < 2 or head[0] == 0x16:
-                return  # TLS, or nothing: record and hang up
+            if self.tls is not None:
+                with self._lock:
+                    self.first_bytes.append(conn.recv(2, socket.MSG_PEEK))
+                try:
+                    conn = self.tls.wrap_socket(conn, server_side=True)
+                except (ssl.SSLError, OSError):
+                    with self._lock:
+                        self.tls_failed += 1
+                    return
+                with self._lock:
+                    self.tls_completed += 1
+                proto = "tls"
+                head = conn.recv(2)
+            else:
+                head = conn.recv(2)
+                with self._lock:
+                    self.first_bytes.append(head)
+                if len(head) < 2 or head[0] == 0x16:
+                    return  # TLS, or nothing: record and hang up
+            if len(head) < 2:
+                return
             length = int.from_bytes(head, "big")
             data = b""
             while len(data) < length:
@@ -239,7 +273,7 @@ class ServingUpstream:
                     return
                 data += chunk
             query = dns.message.from_wire(data)
-            self._record(query, "tcp")
+            self._record(query, proto)
             resp = self._reply(query)
             if resp is not None:
                 wire = resp.to_wire()

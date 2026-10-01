@@ -1,0 +1,10 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: SERVFAIL, id: 54275
+;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; EDE: 10 (RRSIGs Missing): (validation failure <www.signed.example. A IN>: no signatures from 127.0.0.1)
+;; QUESTION SECTION:
+;www.signed.example.		IN	A
+

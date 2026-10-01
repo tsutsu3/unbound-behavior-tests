@@ -24,6 +24,7 @@ import time
 from typing import Self
 
 import dns.exception
+import dns.flags
 import dns.message
 import dns.query
 import dns.rcode
@@ -71,14 +72,62 @@ server:
 """
 
 
-def build_config(case_config: str, port: int = UNBOUND_PORT) -> str:
+#: The boilerplate for cases with `expect.client`: no access-control line, so
+#: Unbound's built-in defaults decide, and every address is listened on so a
+#: query can arrive from somewhere other than 127.0.0.1.
+BOILERPLATE_OPEN = """\
+server:
+    verbosity: 1
+    interface: 0.0.0.0@{port}
+    interface: ::1@{port}
+    port: {port}
+    do-not-query-localhost: no
+    do-daemonize: no
+    username: ""
+    chroot: ""
+    directory: ""
+    pidfile: ""
+    use-syslog: no
+    num-threads: 1
+    so-reuseport: no
+"""
+
+
+def non_loopback_address() -> str:
+    """The container's own IPv4 address on its default route.
+
+    Nothing is sent: connecting a UDP socket only makes the kernel pick the
+    source address it would use.  A query sent to this address from this host
+    also carries it as its source, which is what a `client: non-loopback`
+    case needs -- a client that is not in 127.0.0.0/8.
+    """
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.connect(("192.0.2.1", 53))
+        return s.getsockname()[0]
+
+
+def client_address(client: str | None) -> str:
+    """Where a case's query is sent, for its `expect.client`."""
+    if client == "non-loopback":
+        return non_loopback_address()
+    if client == "loopback6":
+        return "::1"
+    return UNBOUND_ADDR
+
+
+def build_config(
+    case_config: str, port: int = UNBOUND_PORT, client: str | None = None
+) -> str:
     """Boilerplate first, then the case verbatim.
 
     The case text is appended rather than merged, so a case may either add
     `server:` options (they land in the boilerplate's server clause) or open
     its own top level clause such as `forward-zone:`.
     """
-    body = BOILERPLATE.format(addr=UNBOUND_ADDR, port=port)
+    template = BOILERPLATE_OPEN if client else BOILERPLATE
+    body = template.format(addr=UNBOUND_ADDR, port=port)
     return (
         body + case_config if case_config.endswith("\n") else body + case_config + "\n"
     )
@@ -89,6 +138,7 @@ def write_config(
     case_config: str,
     files: dict[str, str] | None = None,
     port: int = UNBOUND_PORT,
+    client: str | None = None,
 ) -> pathlib.Path:
     """Write the generated config, plus any extra files the case declared.
 
@@ -104,7 +154,7 @@ def write_config(
         extra.parent.mkdir(parents=True, exist_ok=True)
         extra.write_text(content, encoding="utf-8")
     path = tmpdir / "unbound.conf"
-    path.write_text(build_config(case_config, port), encoding="utf-8")
+    path.write_text(build_config(case_config, port, client), encoding="utf-8")
     return path
 
 
@@ -201,11 +251,32 @@ def parse_query(spec: str) -> tuple[str, str]:
     return parts[0], parts[1]
 
 
-def send_query(spec: str, timeout: float = 3.0) -> dns.message.Message | None:
+def send_query(
+    spec: str,
+    timeout: float = 3.0,
+    flags: tuple[str, ...] = (),
+    edns: bool = False,
+    addr: str = UNBOUND_ADDR,
+) -> dns.message.Message | None:
+    """Send the case's query; `flags` are from cases.QUERY_FLAGS.
+
+    Without flags the query is what it always was: no EDNS, only RD.  `do`
+    needs EDNS; `edns` asks for EDNS without DO, which a case uses to get an
+    Extended DNS Error back.
+    """
     name, rrtype = parse_query(spec)
-    msg = dns.message.make_query(name, dns.rdatatype.from_text(rrtype))
+    msg = dns.message.make_query(
+        name,
+        dns.rdatatype.from_text(rrtype),
+        use_edns=0 if (edns or "do" in flags) else None,
+        want_dnssec="do" in flags,
+    )
+    if "cd" in flags:
+        msg.flags |= dns.flags.CD
+    if "ad" in flags:
+        msg.flags |= dns.flags.AD
     try:
-        return dns.query.udp(msg, UNBOUND_ADDR, port=UNBOUND_PORT, timeout=timeout)
+        return dns.query.udp(msg, addr, port=UNBOUND_PORT, timeout=timeout)
     except (OSError, dns.exception.DNSException):
         # No answer is a normal outcome: a run-and-observe case only needs
         # Unbound to send the query onwards, and the fake upstream never
@@ -222,11 +293,42 @@ def send_query(spec: str, timeout: float = 3.0) -> dns.message.Message | None:
 DIG_OPTIONS = ("+nocmd", "+nostats")
 
 
-def dig_text(spec: str, port: int = UNBOUND_PORT) -> str:
+def dig_flags(flags: tuple[str, ...] | None) -> list[str]:
+    """dig options that send the same flags as `send_query(flags=...)`.
+
+    dig sets the AD bit by default; a case that lists its query flags and
+    leaves `ad` out means a query without it, so that default is turned off.
+    A case without `query_flags` keeps dig's defaults.
+    """
+    if flags is None:
+        return []
+    opts = ["+adflag" if "ad" in flags else "+noadflag"]
+    if "do" in flags:
+        opts.append("+dnssec")
+    if "cd" in flags:
+        opts.append("+cdflag")
+    return opts
+
+
+def dig_text(
+    spec: str,
+    port: int = UNBOUND_PORT,
+    flags: tuple[str, ...] | None = None,
+    addr: str = UNBOUND_ADDR,
+) -> str:
     """Run `dig` against the daemon and return its output unchanged."""
     name, rrtype = parse_query(spec)
     p = subprocess.run(
-        ["dig", f"@{UNBOUND_ADDR}", "-p", str(port), *DIG_OPTIONS, name, rrtype],
+        [
+            "dig",
+            f"@{addr}",
+            "-p",
+            str(port),
+            *DIG_OPTIONS,
+            *dig_flags(flags),
+            name,
+            rrtype,
+        ],
         capture_output=True,
         text=True,
         check=False,

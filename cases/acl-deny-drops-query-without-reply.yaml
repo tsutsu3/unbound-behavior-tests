@@ -1,0 +1,35 @@
+id: acl-deny-drops-query-without-reply
+title:
+  en: "With access-control deny, the client gets no reply at all"
+  ja: "access-control の deny では、クライアントに応答が返らない"
+chapter: "7.1"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "daemon/worker.c worker_handle_request() -> deny_refuse_all(): for acl_deny the reply is dropped with comm_point_drop_reply() before local zones are looked at"
+  ja: "daemon/worker.c worker_handle_request() → deny_refuse_all(): acl_deny では、local zone を見る前に comm_point_drop_reply() で応答を捨てる"
+manual:
+  en: "doc/unbound.conf.rst access-control: The action deny stops queries from hosts from that netblock."
+  ja: "doc/unbound.conf.rst access-control の項: The action deny stops queries from hosts from that netblock."
+layers:
+  en:
+  - "access control"
+  ja:
+  - "アクセス制御"
+status: verified
+config: |
+  access-control: 10.0.0.0/8 deny
+  access-control: 172.16.0.0/12 deny
+  access-control: 192.168.0.0/16 deny
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  client: non-loopback
+  query: "www.example.com. A"
+  no_reply: true
+  note:
+    en: "Category undecided: the result matches the manual. The harness waits 3 seconds for a reply. Compare acl-default-refuses-non-loopback-client, where the same client gets REFUSED"
+    ja: "分類 undecided: man の記述どおり。ハーネスは応答を3秒待つ。同じクライアントに REFUSED が返る acl-default-refuses-non-loopback-client と比べる"

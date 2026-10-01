@@ -7,7 +7,8 @@ Unbound の設定まわりの挙動を、**ソースを読んで確定した事�
 
 対象: Unbound **1.26.0**（tag `release-1.26.0`, commit `a45da353d3feb5d8fc00685fa1ceda3816d5108f`）
 
-範囲: 設定ファイルのパース仕様、`local-zone` / `local-data`、`forward-zone` / `stub-zone`。
+範囲: 設定ファイルのパース仕様、`local-zone` / `local-data`、`forward-zone` / `stub-zone`、
+`access-control`、QNAME minimisation、上流の TLS、DNSSEC 検証。
 
 ## 使い方
 
@@ -171,8 +172,8 @@ files:
 | ------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `unbound-checkconf` | 設定を書いて `unbound-checkconf` を実行する | `exit`, `stderr_contains`, `stderr_not_contains`, `note`                                                       |
 | `run-and-observe`   | daemon を起動し、偽の上流に届くかを見る     | `checkconf_exit`, `listen{proto,addr}`, `query`, `note`                                                        |
-| `run-and-dig`       | daemon を起動し、応答の中身を見る           | `checkconf_exit`, `starts`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
-| `run-with-upstreams` | 問い合わせを記録し規則どおりに答える偽の上流（名前・型・RD・TCP の最初のバイト）を置き、daemon を起動して問い合わせる | `checkconf_exit`, `upstreams`, `query`, `rcode`, `answer_contains`, `answer_count`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
+| `run-and-dig`       | daemon を起動し、応答の中身を見る           | `checkconf_exit`, `starts`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `query_flags`, `flags_contains`, `flags_not_contains`, `ede_code`, `ede_text_contains`, `no_reply`, `client`, `note` |
+| `run-with-upstreams` | 問い合わせを記録し規則どおりに答える偽の上流（名前・型・RD・TCP の最初のバイト）を置き、daemon を起動して問い合わせる | `checkconf_exit`, `upstreams`, `query`, `rcode`, `answer_contains`, `answer_count`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `query_flags`, `flags_contains`, `flags_not_contains`, `ede_code`, `ede_text_contains`, `no_reply`, `client`, `note` |
 | `run-and-resolve`   | daemon を 53 番で起動し、`/etc/resolv.conf` をそこへ向けて `getent ahosts` を実行する | `checkconf_exit`, `lookup`, `lookup_exit`, `lookup_contains`, `lookup_empty`, `control_lookup`, `control_contains`, `note` |
 
 `unbound-checkconf` の `stderr_contains` / `stderr_not_contains` は標準出力と標準エラー出力をまとめて検索する。
@@ -198,7 +199,27 @@ RR の文字列の `answer` / `authority` / `additional` で答える。一致�
 届いたものは `received_contains`（`"<名前> <型>"` の並び）、`received_first`、
 `received_rd`（すべての問い合わせの RD）、`received_none` で判定する。
 TCP では `tls_client_hello` が、各接続が TLS のハンドシェイクのレコードで始まるかを見る。
-TLS のハンドシェイクを完了させる処理はない。
+
+`proto: tcp` の上流に `tls: {name: <名前>}` を書くと、TLS を終端してから DNS を話す（DNS over TLS）。
+証明書は subjectAltName に `<名前>` を持ち、ケースごとに作る使い捨ての CA が発行する。
+CA 証明書は `unbound.conf` と同じ場所に `harness-ca.pem` として置かれるので、
+ケースは `tls-cert-bundle: "harness-ca.pem"` で信頼するか、その行を書かずにおく。
+`tls_handshake`（`completed` か `failed`）は、Unbound がハンドシェイクを完了させたかを見る。
+`tls` がなければ、TLS で始まる接続は記録して閉じる。
+
+`run-and-dig` と `run-with-upstreams` は、問い合わせの送り方と、応答のセクション以外に読むものを決めるキーを共有する。
+
+| キー | 意味 |
+| --- | --- |
+| `query_flags` | 問い合わせに立てるフラグ: `do`（EDNS の DO ビット）、`cd`、`ad`。省略すると EDNS なしで RD だけ。`[]` は同じ問い合わせを明示したもの（`dig` では、既定で立つ AD ビットを外す） |
+| `flags_contains` / `flags_not_contains` | 応答のヘッダのフラグ。`dig` の表記（`ad`、`cd` など） |
+| `ede_code` / `ede_text_contains` | 応答の Extended DNS Error オプション。どちらかを書くと、問い合わせに EDNS を付ける |
+| `no_reply: true` | 何も返らないこと（`access-control: ... deny`）。答えの判定とは併用できない |
+| `client` | 問い合わせ元。省略すると 127.0.0.1 から 127.0.0.1 へ送り、定型部は `access-control: 127.0.0.0/8 allow` と `::1 allow` を持つ。`non-loopback` か `loopback6` では、定型部に `access-control` の行が**なく**、`0.0.0.0` と `::1` で待ち受け、問い合わせをコンテナ自身のループバックでない IPv4 アドレスか `::1` へ送る。ケースは Unbound の組み込みの既定値を見ることになる |
+
+DNSSEC のケースは、実行時に署名しない。RRSIG / DNSKEY / DS / NSEC は、
+テスト用の鍵で `tools/sign_fixtures.py` が事前に署名したもの（有効期間 2026-09-01〜2046-09-01）をケースに書き、
+信頼アンカーはケースの設定の `trust-anchor:` の行で与える。再生成の方法はそのスクリプトの docstring にある。
 
 定型部は、ループバックの偽の上流に届くよう `do-not-query-localhost: no` にしている。
 既定の `yes` では、Unbound は 127.0.0.0/8 と ::1 へ何も送らない（`forward-addr-localhost-unused-by-default`）。
@@ -247,6 +268,8 @@ Source だけの主張を Test 済みとして書かない。逆も同じ。
 | `runner/cases.py`    | YAML の読み込みとスキーマ検証            |
 | `runner/unbound.py`  | 設定生成と Unbound の起動・問い合わせ    |
 | `runner/upstream.py` | 偽の上流サーバー（宛先の観測、応答と記録）|
+| `runner/tls.py`      | TLS を終端する上流のための、使い捨ての CA とサーバー証明書 |
+| `tools/`             | `sign_fixtures.py`、テスト用の鍵、DNSSEC のケースが持つ署名済みの RR。テストからは実行しない |
 | `test_behavior.py`   | pytest のエントリ（1 関数）              |
 | `gen.py`             | 付録一覧表と集計の生成（英語・日本語）   |
 | `out/`               | `gen.py` の出力と `out/dig/`（`dig` の出力）。コミットする |

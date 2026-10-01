@@ -1,0 +1,54 @@
+id: dnssec-ede-bogus-with-reason-text
+title:
+  en: "With ede: yes and val-log-level: 2, the SERVFAIL for a bogus answer carries EDE 6 (DNSSEC Bogus) with the log line as its text"
+  ja: "ede: yes と val-log-level: 2 では、bogus の答えへの SERVFAIL に EDE 6（DNSSEC Bogus）が付き、説明文はログの行と同じ文字列になる"
+chapter: "8.5"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "services/mesh.c mesh_send_reply() -> mesh_find_and_attach_ede_and_reason(): with ede: yes, the EDE code recorded with the bogus reason is attached, and with val-log-level 2 the reason_bogus_str as its text. The same is done when the bogus answer is returned for a CD query"
+  ja: "services/mesh.c mesh_send_reply() → mesh_find_and_attach_ede_and_reason(): ede: yes なら、bogus の理由とともに記録した EDE コードを付け、val-log-level 2 なら reason_bogus_str を説明文にする。CD の問い合わせに bogus の答えを返すときも同じ"
+manual:
+  en: "doc/unbound.conf.rst ede: If enabled, Unbound will respond with Extended DNS Error codes (RFC 8914). These EDEs provide additional information with a response mainly for, but not limited to, DNS and DNSSEC errors. When the val-log-level option is also set to 2, responses with Extended DNS Errors concerning DNSSEC failures will also contain a descriptive text message about the reason for the failure. Default: no"
+  ja: "doc/unbound.conf.rst ede の項: If enabled, Unbound will respond with Extended DNS Error codes (RFC 8914). ... When the val-log-level option is also set to 2, responses with Extended DNS Errors concerning DNSSEC failures will also contain a descriptive text message about the reason for the failure. Default: no"
+layers:
+  en:
+  - "validation"
+  - "Extended DNS Errors"
+  ja:
+  - "検証"
+  - "Extended DNS Errors"
+status: verified
+config: |
+  trust-anchor: "signed.example. DS 51548 13 2 338518751d573ad799ca16bbc79f428dcbc5e4cf8ffb6a253cf088482f057b32"
+  ede: yes
+  val-log-level: 2
+  stub-zone:
+    name: "signed.example."
+    stub-addr: 127.0.0.1@5809
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5809"
+    replies:
+    - qname: "signed.example."
+      qtype: DNSKEY
+      aa: true
+      answer:
+      - "signed.example. 300 IN DNSKEY 257 3 13 /KqfUo9VrjZWU0aj9EC7KIUgL2SyGAgt 2jD+wX0dwXELX8XnB4YoRriV7nrUQH/Q QE8s/RTdWA2qt8E7fThZgA=="
+      - "signed.example. 300 IN RRSIG DNSKEY 13 2 300 20460901000000 20260901000000 51548 signed.example. O/yTTEPP6UEM9Ba/KofSx6oHThyjBvrd XgFz0K6/dpp5TiSgjPky+BUaLkN4dVQw PVKK8hVT+mW5DZZvMn1pFw=="
+    - qname: "bad.signed.example."
+      qtype: A
+      aa: true
+      answer:
+      - "bad.signed.example. 300 IN A 192.0.2.99"
+      - "bad.signed.example. 300 IN RRSIG A 13 3 300 20460901000000 20260901000000 51548 signed.example. fQDZqd6obmGaCQnf8re2XKol6tOFCN4v WfDk2vBy1wMVpq30BpCnHWiWnN/d23CN M1wY6G+vl6o+e6XV3E10Ug=="
+  query: "bad.signed.example. A"
+  rcode: "SERVFAIL"
+  ede_code: 6
+  ede_text_contains: "validation failure <bad.signed.example. A IN>: signature crypto failed from 127.0.0.1"
+  note:
+    en: "Category undecided: the result matches the manual. The query carries EDNS; an EDE cannot be returned without it"
+    ja: "分類 undecided: man の記述どおり。問い合わせには EDNS を付けている。EDNS がなければ EDE は返せない"

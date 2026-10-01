@@ -1,0 +1,31 @@
+id: local-zone-static-subzone-inside-always-nxdomain
+title:
+  en: "A static zone written below an always_nxdomain zone answers its own local-data; the closer zone wins"
+  ja: "always_nxdomain のゾーンの下に書いた static のゾーンは、自分の local-data で答える。より近いゾーンが使われる"
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_zones_answer() -> local_zones_tags_lookup() picks the closest enclosing zone for the query name, so the query for ok.ads.example.com. is handled by the static zone and never reaches the always_nxdomain zone above it"
+  ja: "services/localzone.c local_zones_answer() → local_zones_tags_lookup() は問い合わせ名を覆う最も近いゾーンを選ぶ。ok.ads.example.com. の問い合わせは static のゾーンが処理し、上の always_nxdomain のゾーンには届かない"
+manual:
+  en: "none (the local-zone entry does not say which zone answers when zones are nested)"
+  ja: "none（local-zone の項は、ゾーンが入れ子のときにどのゾーンが答えるかを書いていない）"
+layers:
+  en: ["zone selection", "answer generation per zone type"]
+  ja: ["ゾーンの選択", "ゾーン型ごとの応答生成"]
+status: verified
+config: |
+  local-zone: "ads.example.com." always_nxdomain
+  local-zone: "ok.ads.example.com." static
+  local-data: "ok.ads.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "ok.ads.example.com. A"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ["ok.ads.example.com. 3600 IN A 192.0.2.1"]
+  note:
+    en: "The same local-data without the static zone line is local-zone-always-nxdomain-ignores-local-data, which answers NXDOMAIN"
+    ja: "static のゾーンの行がなく local-data だけの場合は local-zone-always-nxdomain-ignores-local-data で、NXDOMAIN になる"

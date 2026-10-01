@@ -1,0 +1,13 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 51928
+;; flags: qr rd ra ad; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags: do; udp: 1232
+;; QUESTION SECTION:
+;www.signed.example.		IN	A
+
+;; ANSWER SECTION:
+www.signed.example.	300	IN	A	192.0.2.80
+www.signed.example.	300	IN	RRSIG	A 13 3 300 20460901000000 20260901000000 51548 signed.example. DxKXzctz36wDkmandl0ieplyQfYDGrxsTxQ/Ame/oA/3Yj5ogwCx7s3a jK3G/eQ6ZX05grsK3sVufhVqwiQIhw==
+

@@ -1,0 +1,53 @@
+id: dnssec-val-log-level-2-logs-reason-and-server
+title:
+  en: "val-log-level: 2 logs one line per failed query with the reason and the server the data came from, at verbosity 0"
+  ja: "val-log-level: 2 は、verbosity: 0 でも、失敗した問い合わせごとに理由とデータの送り元を1行で書く"
+chapter: "8.5"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "validator/validator.c processFinished(): for a bogus result, val-log-level 1 logs log_query_info(NO_VERBOSE, \"validation failure\", ...), and 2 logs the string built by util/module.c errinf_to_str_bogus() (\"validation failure <name type class>: reason from addr\") and keeps it as reason_bogus_str for the EDE text"
+  ja: "validator/validator.c processFinished(): bogus のとき、val-log-level 1 では log_query_info(NO_VERBOSE, \"validation failure\", ...) で書き、2 では util/module.c errinf_to_str_bogus() が組み立てた文字列（\"validation failure <名前 型 クラス>: 理由 from アドレス\"）を書いて、EDE の説明文用に reason_bogus_str として残す"
+manual:
+  en: "doc/unbound.conf.rst val-log-level: Have the validator print validation failures to the log. Regardless of the verbosity setting. At 1, for every user query that fails a line is printed to the logs. ... At 2, not only the query that failed is printed but also the reason why Unbound thought it was wrong and which server sent the faulty data. Default: 0"
+  ja: "doc/unbound.conf.rst val-log-level の項: Have the validator print validation failures to the log. Regardless of the verbosity setting. At 1, for every user query that fails a line is printed to the logs. ... At 2, not only the query that failed is printed but also the reason why Unbound thought it was wrong and which server sent the faulty data. Default: 0"
+layers:
+  en:
+  - "validation"
+  - "logging"
+  ja:
+  - "検証"
+  - "ログ"
+status: verified
+config: |
+  trust-anchor: "signed.example. DS 51548 13 2 338518751d573ad799ca16bbc79f428dcbc5e4cf8ffb6a253cf088482f057b32"
+  verbosity: 0
+  val-log-level: 2
+  stub-zone:
+    name: "signed.example."
+    stub-addr: 127.0.0.1@5807
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5807"
+    replies:
+    - qname: "signed.example."
+      qtype: DNSKEY
+      aa: true
+      answer:
+      - "signed.example. 300 IN DNSKEY 257 3 13 /KqfUo9VrjZWU0aj9EC7KIUgL2SyGAgt 2jD+wX0dwXELX8XnB4YoRriV7nrUQH/Q QE8s/RTdWA2qt8E7fThZgA=="
+      - "signed.example. 300 IN RRSIG DNSKEY 13 2 300 20460901000000 20260901000000 51548 signed.example. O/yTTEPP6UEM9Ba/KofSx6oHThyjBvrd XgFz0K6/dpp5TiSgjPky+BUaLkN4dVQw PVKK8hVT+mW5DZZvMn1pFw=="
+    - qname: "bad.signed.example."
+      qtype: A
+      aa: true
+      answer:
+      - "bad.signed.example. 300 IN A 192.0.2.99"
+      - "bad.signed.example. 300 IN RRSIG A 13 3 300 20460901000000 20260901000000 51548 signed.example. fQDZqd6obmGaCQnf8re2XKol6tOFCN4v WfDk2vBy1wMVpq30BpCnHWiWnN/d23CN M1wY6G+vl6o+e6XV3E10Ug=="
+  query: "bad.signed.example. A"
+  rcode: "SERVFAIL"
+  stderr_contains: "info: validation failure <bad.signed.example. A IN>: signature crypto failed from 127.0.0.1"
+  note:
+    en: "Category undecided: the result matches the manual. The reason for a signature that does not verify is \"signature crypto failed\" (validator/val_secalgo.c)"
+    ja: "分類 undecided: man の記述どおり。署名を検証できないときの理由は \"signature crypto failed\"（validator/val_secalgo.c）"

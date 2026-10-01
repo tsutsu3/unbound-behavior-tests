@@ -1,0 +1,52 @@
+id: forward-tls-upstream-without-ca-or-name-is-unauthenticated
+title:
+  en: "Without a CA bundle and without #name, the handshake completes with any certificate and nothing is authenticated"
+  ja: "CA 証明書も #name もなければ、どの証明書でもハンドシェイクは完了し、何も認証されない"
+chapter: "7.4"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "util/net_help.c connect_sslctx_create() sets SSL_VERIFY_PEER on the context only when a CA bundle (or the system store) is given; util/netevent.c ssl_handshake() then logs plain \"SSL connection\" (the verify peer flag was not set), and services/outside_network.c logs \"the query is using TLS encryption, for an unauthenticated connection\" when the address has no #name"
+  ja: "util/net_help.c connect_sslctx_create() は、CA 証明書（かシステムの証明書ストア）の指定があるときだけコンテキストに SSL_VERIFY_PEER を立てる。util/netevent.c ssl_handshake() はこのとき \"SSL connection\" とだけ書く（verify peer のフラグが立っていない）。services/outside_network.c は、アドレスに #name がないとき \"the query is using TLS encryption, for an unauthenticated connection\" と書く"
+manual:
+  en: "doc/unbound.conf.rst forward-tls-upstream: Enabled or disable whether the queries to this forwarder use TLS for transport. If you enable this, also configure a tls-cert-bundle or use tls-win-cert to load CA certs, otherwise the connections cannot be authenticated. Default: no"
+  ja: "doc/unbound.conf.rst forward-tls-upstream の項: Enabled or disable whether the queries to this forwarder use TLS for transport. If you enable this, also configure a tls-cert-bundle or use tls-win-cert to load CA certs, otherwise the connections cannot be authenticated. Default: no"
+layers:
+  en:
+  - "upstream TLS handshake"
+  - "certificate verification"
+  ja:
+  - "上流への TLS のハンドシェイク"
+  - "証明書の検証"
+status: verified
+config: |
+  verbosity: 4
+  forward-zone:
+    name: "."
+    forward-tls-upstream: yes
+    forward-addr: 127.0.0.1@5833
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5833"
+    proto: tcp
+    tls:
+      name: "dot.example.net"
+    replies:
+    - qname: "www.example.com."
+      qtype: A
+      answer:
+      - "www.example.com. 300 IN A 192.0.2.10"
+    tls_handshake: "completed"
+    received_contains:
+    - "www.example.com. A"
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains:
+  - "www.example.com. 300 IN A 192.0.2.10"
+  stderr_contains: "the query is using TLS encryption, for an unauthenticated connection"
+  note:
+    en: "Category undecided: the result matches the manual. The fake forwarder terminates TLS with a certificate for dot.example.net issued by a CA made for this run (harness-ca.pem), which this Unbound has no way to check"
+    ja: "分類 undecided: man の記述どおり。偽の転送先は、この実行のために作った CA（harness-ca.pem）が発行した dot.example.net の証明書で TLS を終端する。この Unbound にはそれを確かめる手段がない"

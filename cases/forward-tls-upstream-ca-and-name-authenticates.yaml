@@ -1,0 +1,53 @@
+id: forward-tls-upstream-ca-and-name-authenticates
+title:
+  en: "With a CA bundle and a matching #name, the upstream TLS handshake completes and Unbound logs the connection as authenticated"
+  ja: "CA 証明書と一致する #name があれば、上流への TLS のハンドシェイクは完了し、Unbound は接続を authenticated とログに書く"
+chapter: "7.4"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "util/netevent.c ssl_handshake(): with SSL_VERIFY_PEER set and SSL_get_verify_result() == X509_V_OK it logs \"SSL connection to <name> authenticated\" at VERB_ALGO"
+  ja: "util/netevent.c ssl_handshake(): SSL_VERIFY_PEER が立っていて SSL_get_verify_result() が X509_V_OK なら、VERB_ALGO で \"SSL connection to <名前> authenticated\" を書く"
+manual:
+  en: "doc/unbound.conf.rst forward-addr: At high verbosity it logs the TLS certificate, with TLS enabled. If you leave out the '#' and auth name from the forward-addr, any name is accepted. The cert must also match a CA from the tls-cert-bundle."
+  ja: "doc/unbound.conf.rst forward-addr の項: At high verbosity it logs the TLS certificate, with TLS enabled. If you leave out the '#' and auth name from the forward-addr, any name is accepted. The cert must also match a CA from the tls-cert-bundle."
+layers:
+  en:
+  - "upstream TLS handshake"
+  - "certificate verification"
+  ja:
+  - "上流への TLS のハンドシェイク"
+  - "証明書の検証"
+status: verified
+config: |
+  verbosity: 4
+  tls-cert-bundle: "harness-ca.pem"
+  forward-zone:
+    name: "."
+    forward-tls-upstream: yes
+    forward-addr: 127.0.0.1@5831#dot.example.net
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5831"
+    proto: tcp
+    tls:
+      name: "dot.example.net"
+    replies:
+    - qname: "www.example.com."
+      qtype: A
+      answer:
+      - "www.example.com. 300 IN A 192.0.2.10"
+    tls_handshake: "completed"
+    received_contains:
+    - "www.example.com. A"
+  query: "www.example.com. A"
+  rcode: "NOERROR"
+  answer_contains:
+  - "www.example.com. 300 IN A 192.0.2.10"
+  stderr_contains: "SSL connection to dot.example.net authenticated"
+  note:
+    en: "Category undecided: the result matches the manual. The fake forwarder terminates TLS with a certificate for dot.example.net issued by a CA made for this run (harness-ca.pem)"
+    ja: "分類 undecided: man の記述どおり。偽の転送先は、この実行のために作った CA（harness-ca.pem）が発行した dot.example.net の証明書で TLS を終端する"

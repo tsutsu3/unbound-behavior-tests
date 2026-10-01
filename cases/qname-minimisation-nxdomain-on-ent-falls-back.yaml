@@ -1,0 +1,42 @@
+id: qname-minimisation-nxdomain-on-ent-falls-back
+title:
+  en: "If a server answers a minimised query with NXDOMAIN in an unsigned zone, Unbound stops minimising and sends the full question"
+  ja: 未署名のゾーンで最小化した問い合わせに NXDOMAIN が返ると、Unbound は最小化をやめて元の問い合わせを送る
+chapter: "7.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c processQueryResponse(): for an ANSWER-type response with an RCODE other than NOERROR while minimising, and qname-minimisation-strict off, minimisation_state becomes DONOT_MINIMISE_STATE; an NXDOMAIN without dnssec_expected goes back to QUERYTARGETS_STATE"
+  ja: "iterator/iterator.c processQueryResponse(): 最小化中に NOERROR 以外の ANSWER 型の応答を受け、qname-minimisation-strict が無効なら minimisation_state を DONOT_MINIMISE_STATE にする。dnssec_expected でない NXDOMAIN なら QUERYTARGETS_STATE へ戻る"
+manual:
+  en: "doc/unbound.conf.rst qname-minimisation: Best effort approach; full QNAME and original QTYPE will be sent when upstream replies with a RCODE other than NOERROR, except when receiving NXDOMAIN from a DNSSEC signed zone."
+  ja: "doc/unbound.conf.rst qname-minimisation の項: Best effort approach; full QNAME and original QTYPE will be sent when upstream replies with a RCODE other than NOERROR, except when receiving NXDOMAIN from a DNSSEC signed zone."
+layers:
+  en: ["outgoing query name (iterator)", "minimisation fallback"]
+  ja: ["送出する問い合わせの名前（iterator）", "最小化のフォールバック"]
+status: verified
+config: |
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5704
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5704"
+      replies:
+        - qname: "www.a.b.example.com."
+          qtype: A
+          aa: true
+          answer: ["www.a.b.example.com. 300 IN A 192.0.2.20"]
+        - aa: true
+          rcode: NXDOMAIN
+          authority: ["example.com. 300 IN SOA ns.example.com. host.example.com. 1 3600 900 604800 300"]
+      received_first: "b.example.com. A"
+      received_contains: ["b.example.com. A", "www.a.b.example.com. A"]
+  query: "www.a.b.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["www.a.b.example.com. 300 IN A 192.0.2.20"]
+  note:
+    en: "The fake server wrongly answers the empty non-terminal b.example.com with NXDOMAIN. Compare qname-minimisation-strict-returns-nxdomain-on-ent"
+    ja: "偽の権威 DNS サーバーは空の非終端 b.example.com に誤って NXDOMAIN を返す。qname-minimisation-strict-returns-nxdomain-on-ent と比べる"

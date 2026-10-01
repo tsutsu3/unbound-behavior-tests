@@ -1,0 +1,40 @@
+id: qname-minimisation-refused-on-ent-falls-back
+title:
+  en: "If a server answers a minimised query with REFUSED, Unbound stops minimising and sends the full question"
+  ja: 最小化した問い合わせに REFUSED が返ると、Unbound は最小化をやめて元の問い合わせを送る
+chapter: "7.2"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_resptype.c response_type_from_server() classifies an RCODE other than NOERROR / NXDOMAIN as RESPONSE_TYPE_THROWAWAY; iterator/iterator.c processQueryResponse() then sets DONOT_MINIMISE_STATE when qname-minimisation is on and qname-minimisation-strict is off, and goes back to QUERYTARGETS_STATE"
+  ja: "iterator/iter_resptype.c response_type_from_server() は NOERROR / NXDOMAIN 以外の RCODE を RESPONSE_TYPE_THROWAWAY に分類する。iterator/iterator.c processQueryResponse() は、qname-minimisation が有効で qname-minimisation-strict が無効なら DONOT_MINIMISE_STATE にして QUERYTARGETS_STATE へ戻る"
+manual:
+  en: "doc/unbound.conf.rst qname-minimisation: Best effort approach; full QNAME and original QTYPE will be sent when upstream replies with a RCODE other than NOERROR, except when receiving NXDOMAIN from a DNSSEC signed zone."
+  ja: "doc/unbound.conf.rst qname-minimisation の項: Best effort approach; full QNAME and original QTYPE will be sent when upstream replies with a RCODE other than NOERROR, except when receiving NXDOMAIN from a DNSSEC signed zone."
+layers:
+  en: ["outgoing query name (iterator)", "minimisation fallback"]
+  ja: ["送出する問い合わせの名前（iterator）", "最小化のフォールバック"]
+status: verified
+config: |
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5706
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5706"
+      replies:
+        - qname: "www.a.b.example.com."
+          qtype: A
+          aa: true
+          answer: ["www.a.b.example.com. 300 IN A 192.0.2.20"]
+        - rcode: REFUSED
+      received_first: "b.example.com. A"
+      received_contains: ["b.example.com. A", "www.a.b.example.com. A"]
+  query: "www.a.b.example.com. A"
+  rcode: "NOERROR"
+  answer_contains: ["www.a.b.example.com. 300 IN A 192.0.2.20"]
+  note:
+    en: "Compare qname-minimisation-strict-refused-on-ent-is-servfail"
+    ja: "qname-minimisation-strict-refused-on-ent-is-servfail と比べる"

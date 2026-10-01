@@ -8,7 +8,8 @@ behaves, both as **facts established by reading the source** and as
 
 Target: Unbound **1.26.0** (tag `release-1.26.0`, commit `a45da353d3feb5d8fc00685fa1ceda3816d5108f`)
 
-Scope: config file parsing, `local-zone` / `local-data`, `forward-zone` / `stub-zone`.
+Scope: config file parsing, `local-zone` / `local-data`, `forward-zone` / `stub-zone`,
+`access-control`, QNAME minimisation, upstream TLS, and DNSSEC validation.
 
 ## Usage
 
@@ -183,8 +184,8 @@ either (it would clash with the file generated from `config:`).
 | ------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `unbound-checkconf` | Writes the config and runs `unbound-checkconf`       | `exit`, `stderr_contains`, `stderr_not_contains`, `note`                                                       |
 | `run-and-observe`   | Starts the daemon and checks what reaches a fake upstream | `checkconf_exit`, `listen{proto,addr}`, `query`, `note`                                                   |
-| `run-and-dig`       | Starts the daemon and checks the content of the answer | `checkconf_exit`, `starts`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
-| `run-with-upstreams` | Starts fake upstreams that record each query (name, type, RD bit, first TCP bytes) and answer by rule, then starts the daemon and queries it | `checkconf_exit`, `upstreams`, `query`, `rcode`, `answer_contains`, `answer_count`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `note` |
+| `run-and-dig`       | Starts the daemon and checks the content of the answer | `checkconf_exit`, `starts`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `query_flags`, `flags_contains`, `flags_not_contains`, `ede_code`, `ede_text_contains`, `no_reply`, `client`, `note` |
+| `run-with-upstreams` | Starts fake upstreams that record each query (name, type, RD bit, first TCP bytes) and answer by rule, then starts the daemon and queries it | `checkconf_exit`, `upstreams`, `query`, `rcode`, `answer_contains`, `answer_count`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `query_flags`, `flags_contains`, `flags_not_contains`, `ede_code`, `ede_text_contains`, `no_reply`, `client`, `note` |
 | `run-and-resolve`   | Starts the daemon on port 53, points `/etc/resolv.conf` at it and runs `getent ahosts` | `checkconf_exit`, `lookup`, `lookup_exit`, `lookup_contains`, `lookup_empty`, `control_lookup`, `control_contains`, `note` |
 
 `stderr_contains` / `stderr_not_contains` in `unbound-checkconf` search stdout
@@ -213,7 +214,16 @@ as RR strings. With no matching rule the upstream stays silent. What must have
 arrived is checked with `received_contains` (`"<name> <type>"` entries),
 `received_first`, `received_rd` (the RD bit of every query) and
 `received_none`; over TCP, `tls_client_hello` checks that each connection
-starts with a TLS handshake record. Nothing here completes a TLS handshake.
+starts with a TLS handshake record.
+
+An upstream with `proto: tcp` and `tls: {name: <name>}` terminates TLS and then
+serves DNS over the stream (DNS over TLS). Its certificate carries `<name>` as
+subjectAltName and is issued, per case, by a throwaway CA whose certificate is
+written next to `unbound.conf` as `harness-ca.pem`; a case trusts it with
+`tls-cert-bundle: "harness-ca.pem"` or leaves that line out. `tls_handshake`
+(`completed` or `failed`) checks whether Unbound went through with the
+handshake. Without `tls`, a connection that starts with TLS is recorded and
+closed.
 
 ```yaml
 command: run-with-upstreams
@@ -228,6 +238,23 @@ expect:
   query: "www.example.com. A"
   answer_contains: ["192.0.2.10"]
 ```
+
+`run-and-dig` and `run-with-upstreams` share the keys that say how the query is
+sent and what is read off the reply besides its sections:
+
+| Key | Meaning |
+| --- | --- |
+| `query_flags` | Flags set on the query: `do` (EDNS DO bit), `cd`, `ad`. Left out, the query has no EDNS and only RD. `[]` means the same query, stated explicitly (for `dig` it turns off the AD bit `dig` sets by default) |
+| `flags_contains` / `flags_not_contains` | Header flags of the reply, as `dig` prints them (`ad`, `cd`, ...) |
+| `ede_code` / `ede_text_contains` | The Extended DNS Error option of the reply. The query is sent with EDNS when either is given |
+| `no_reply: true` | Nothing must come back (`access-control: ... deny`). Cannot be combined with the answer checks |
+| `client` | Where the query comes from. Left out: 127.0.0.1 to 127.0.0.1, and the boilerplate has `access-control: 127.0.0.0/8 allow` and `::1 allow`. `non-loopback` or `loopback6`: the boilerplate has **no** `access-control` line and listens on `0.0.0.0` and `::1`, and the query is sent to the container's own non-loopback IPv4 address or to `::1`, so the case sees Unbound's built-in defaults |
+
+DNSSEC cases do not sign anything at run time. The RRSIG / DNSKEY / DS / NSEC
+records are written out in the case, pre-signed by test keys with
+`tools/sign_fixtures.py` (valid 2026-09-01 to 2046-09-01), and the trust anchor
+is a `trust-anchor:` line in the case's config. See the docstring of that
+script for how to regenerate them.
 
 The boilerplate sets `do-not-query-localhost: no` so that fake upstreams on
 loopback can be reached at all. With the default (`yes`) Unbound sends nothing
@@ -282,6 +309,8 @@ from the results.
 | `runner/cases.py`    | YAML loading and schema validation                 |
 | `runner/unbound.py`  | Config generation, starting Unbound, sending queries |
 | `runner/upstream.py` | Fake upstream server (observes the destination)    |
+| `runner/tls.py`      | Throwaway CA and server certificate for a TLS-terminating upstream |
+| `tools/`             | `sign_fixtures.py`, the test keys and the pre-signed records the DNSSEC cases carry. Not run by the tests |
 | `test_behavior.py`   | pytest entry point (a single function)             |
 | `gen.py`             | Generates the Appendix tables and summary (English and Japanese) |
 | `out/`               | Output of `gen.py`, and `out/dig/` (output of `dig`). Committed |

@@ -1,0 +1,53 @@
+id: private-address-in-signed-rrset-makes-answer-bogus
+title:
+  en: "When private-address removes one address from a signed RRset, the signature no longer verifies and the answer is SERVFAIL"
+  ja: "private-address が署名された RRset からアドレスを1つ取り除くと、署名を検証できなくなり、答えは SERVFAIL になる"
+chapter: "7.3"
+category: undecided
+versions:
+- "1.26.0"
+source:
+  en: "iterator/iter_priv.c priv_rrset_bad() removes only the matching RR with msgparse_rrset_remove_rr() and leaves the RRSIG; the validator then verifies the signature over the shortened RRset, which fails"
+  ja: "iterator/iter_priv.c priv_rrset_bad() は msgparse_rrset_remove_rr() で該当する RR だけを取り除き、RRSIG は残す。validator は短くなった RRset に対して署名を検証するので失敗する"
+manual:
+  en: "doc/unbound.conf.rst private-address: These are addresses on your private network, and are not allowed to be returned for public internet names. Any occurrence of such addresses are removed from DNS answers. Additionally, the DNSSEC validator may mark the answers bogus."
+  ja: "doc/unbound.conf.rst private-address の項: These are addresses on your private network, and are not allowed to be returned for public internet names. Any occurrence of such addresses are removed from DNS answers. Additionally, the DNSSEC validator may mark the answers bogus."
+layers:
+  en:
+  - "response scrubbing"
+  - "validation"
+  ja:
+  - "応答の洗浄"
+  - "検証"
+status: verified
+config: |
+  trust-anchor: "signed.example. DS 51548 13 2 338518751d573ad799ca16bbc79f428dcbc5e4cf8ffb6a253cf088482f057b32"
+  private-address: 192.168.0.0/16
+  stub-zone:
+    name: "signed.example."
+    stub-addr: 127.0.0.1@5824
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5824"
+    replies:
+    - qname: "signed.example."
+      qtype: DNSKEY
+      aa: true
+      answer:
+      - "signed.example. 300 IN DNSKEY 257 3 13 /KqfUo9VrjZWU0aj9EC7KIUgL2SyGAgt 2jD+wX0dwXELX8XnB4YoRriV7nrUQH/Q QE8s/RTdWA2qt8E7fThZgA=="
+      - "signed.example. 300 IN RRSIG DNSKEY 13 2 300 20460901000000 20260901000000 51548 signed.example. O/yTTEPP6UEM9Ba/KofSx6oHThyjBvrd XgFz0K6/dpp5TiSgjPky+BUaLkN4dVQw PVKK8hVT+mW5DZZvMn1pFw=="
+    - qname: "mixed.signed.example."
+      qtype: A
+      aa: true
+      answer:
+      - "mixed.signed.example. 300 IN A 192.0.2.83"
+      - "mixed.signed.example. 300 IN A 192.168.1.10"
+      - "mixed.signed.example. 300 IN RRSIG A 13 3 300 20460901000000 20260901000000 51548 signed.example. nfWS628HnTjkAXzJfghXp+JSs0mFg+Ni crO0squjH49fOmg0c/Mvh/wVXtja0j10 KS+788O7GFQ1c7TEzzsC8g=="
+  query: "mixed.signed.example. A"
+  rcode: "SERVFAIL"
+  answer_count: 0
+  note:
+    en: "Category undecided: the result matches the manual. The RRset has 192.0.2.83 and 192.168.1.10 and is correctly signed as a whole"
+    ja: "分類 undecided: man の記述どおり。RRset は 192.0.2.83 と 192.168.1.10 を持ち、全体としては正しく署名されている"

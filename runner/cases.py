@@ -54,6 +54,33 @@ TOP_LEVEL_REQUIRED = (
 #: has to know the temporary directory's name.
 TOP_LEVEL_OPTIONAL = ("files",)
 
+#: How the case's query is sent and what is read off the reply besides the
+#: sections.  Shared by run-and-dig and run-with-upstreams.
+#:
+#: * `query_flags` -- flags set on the query: `do` (EDNS DO bit), `cd`, `ad`.
+#: * `flags_contains` / `flags_not_contains` -- header flags of the reply,
+#:   lower case as dig prints them (`ad`, `cd`, `ra`, ...).
+#: * `ede_code` / `ede_text_contains` -- the Extended DNS Error option of the
+#:   reply.  The query is sent with EDNS when either is given.
+#: * `no_reply` -- nothing must come back (access-control deny).
+#: * `client` -- where the query comes from.  Left out, it is sent from
+#:   127.0.0.1 to 127.0.0.1 and the boilerplate allows 127.0.0.0/8 and ::1.
+#:   With `non-loopback` or `loopback6` the boilerplate carries NO
+#:   access-control line and listens on every address, and the query is sent
+#:   to the container's own non-loopback IPv4 address or to ::1, so the case
+#:   sees Unbound's built-in access-control defaults.
+CLIENT_KEYS = {
+    "query_flags",
+    "flags_contains",
+    "flags_not_contains",
+    "ede_code",
+    "ede_text_contains",
+    "no_reply",
+    "client",
+}
+QUERY_FLAGS = ("do", "cd", "ad")
+CLIENTS = ("non-loopback", "loopback6")
+
 EXPECT_KEYS = {
     "unbound-checkconf": {"exit", "stderr_contains", "stderr_not_contains", "note"},
     "run-and-observe": {"checkconf_exit", "listen", "query", "note"},
@@ -69,7 +96,8 @@ EXPECT_KEYS = {
         "stderr_contains",
         "stderr_not_contains",
         "note",
-    },
+    }
+    | CLIENT_KEYS,
     "run-with-upstreams": {
         "checkconf_exit",
         "upstreams",
@@ -81,7 +109,8 @@ EXPECT_KEYS = {
         "stderr_contains",
         "stderr_not_contains",
         "note",
-    },
+    }
+    | CLIENT_KEYS,
     "run-and-resolve": {
         "checkconf_exit",
         "lookup",
@@ -100,6 +129,9 @@ LIST_KEYS = (
     "authority_contains",
     "lookup_contains",
     "control_contains",
+    "query_flags",
+    "flags_contains",
+    "flags_not_contains",
 )
 
 LISTEN_KEYS = {"proto", "addr"}
@@ -115,7 +147,16 @@ UPSTREAM_KEYS = {
     "received_rd",
     "received_none",
     "tls_client_hello",
+    "tls",
+    "tls_handshake",
 }
+#: `tls` makes the upstream terminate TLS (DNS over TLS) instead of hanging
+#: up on the ClientHello.  Its one key, `name`, is the name in the server
+#: certificate; the certificate is issued per case by a throwaway CA whose
+#: certificate is written next to unbound.conf as `harness-ca.pem`, so a case
+#: can load it with `tls-cert-bundle: "harness-ca.pem"` or leave it out.
+TLS_KEYS = {"name"}
+TLS_HANDSHAKES = ("completed", "failed")
 REPLY_KEYS = {"qname", "qtype", "rcode", "aa", "answer", "authority", "additional"}
 
 
@@ -250,6 +291,61 @@ def _parse_upstreams(path: pathlib.Path, expect: dict) -> None:
         _require(
             not up.get("tls_client_hello") or up["proto"] == "tcp",
             f"{where}: tls_client_hello needs proto tcp",
+        )
+        if "tls" in up:
+            _require(up["proto"] == "tcp", f"{where}: tls needs proto tcp")
+            _require(
+                isinstance(up["tls"], dict)
+                and set(up["tls"]) == TLS_KEYS
+                and isinstance(up["tls"]["name"], str)
+                and up["tls"]["name"],
+                f"{where}.tls must be a mapping with exactly {sorted(TLS_KEYS)}",
+            )
+        if "tls_handshake" in up:
+            _require("tls" in up, f"{where}: tls_handshake needs tls")
+            _require(
+                up["tls_handshake"] in TLS_HANDSHAKES,
+                f"{where}.tls_handshake must be one of {TLS_HANDSHAKES}",
+            )
+
+
+def _parse_client(path: pathlib.Path, expect: dict) -> None:
+    """Validate the CLIENT_KEYS of a run-and-dig / run-with-upstreams case."""
+    bad = set(expect.get("query_flags", [])) - set(QUERY_FLAGS)
+    _require(
+        not bad,
+        f"{path.name}: expect.query_flags {sorted(bad)} not in {QUERY_FLAGS}",
+    )
+    if "client" in expect:
+        _require(
+            expect["client"] in CLIENTS,
+            f"{path.name}: expect.client must be one of {CLIENTS}",
+        )
+    if "ede_code" in expect:
+        _require(
+            isinstance(expect["ede_code"], int),
+            f"{path.name}: expect.ede_code must be an integer",
+        )
+    if "ede_text_contains" in expect:
+        _require(
+            isinstance(expect["ede_text_contains"], str),
+            f"{path.name}: expect.ede_text_contains must be a string",
+        )
+    if expect.get("no_reply"):
+        clash = set(expect) & {
+            "rcode",
+            "answer_contains",
+            "answer_count",
+            "answer_ttl",
+            "authority_contains",
+            "flags_contains",
+            "flags_not_contains",
+            "ede_code",
+            "ede_text_contains",
+        }
+        _require(
+            not clash,
+            f"{path.name}: no_reply cannot check an answer ({sorted(clash)})",
         )
 
 
@@ -393,6 +489,7 @@ def parse_case(path: pathlib.Path) -> Case:
             not clash,
             f"{path.name}: starts: false cannot check an answer ({sorted(clash)})",
         )
+    _parse_client(path, expect)
     if raw["command"] == "run-and-resolve":
         _require(
             isinstance(expect.get("lookup"), str) and expect["lookup"],

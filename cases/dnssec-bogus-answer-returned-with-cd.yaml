@@ -1,0 +1,60 @@
+id: dnssec-bogus-answer-returned-with-cd
+title:
+  en: "With the CD bit in the query, the same bogus answer is returned with NOERROR and val-bogus-ttl as its TTL, the CD bit copied and no AD bit"
+  ja: "問い合わせに CD ビットがあれば、同じ bogus の答えが NOERROR で返る。TTL は val-bogus-ttl になり、CD ビットは写され、AD ビットは付かない"
+chapter: "8.3"
+category: A
+versions:
+- "1.26.0"
+source:
+  en: "services/mesh.c mesh_send_reply(): when validation is needed and the query has no CD bit (or ignore-cd-flag is set), a reply whose security is bogus or below is turned into SERVFAIL. validator/validator.c processFinished() sets the TTL of a bogus reply to val-bogus-ttl"
+  ja: "services/mesh.c mesh_send_reply(): 検証が必要で、問い合わせに CD ビットがない（または ignore-cd-flag が有効な）とき、security が bogus 以下の応答を SERVFAIL にする。validator/validator.c processFinished() は bogus の応答の TTL を val-bogus-ttl にする"
+manual:
+  en: "none (ignore-cd-flag says what happens when the flag is ignored, not what the default does with a bogus answer)"
+  ja: "none（ignore-cd-flag の項は CD を無視したときのことを書くが、既定で bogus の答えをどう扱うかは書いていない）"
+layers:
+  en:
+  - "validation"
+  - "reply to the client"
+  ja:
+  - "検証"
+  - "クライアントへの応答"
+status: verified
+config: |
+  trust-anchor: "signed.example. DS 51548 13 2 338518751d573ad799ca16bbc79f428dcbc5e4cf8ffb6a253cf088482f057b32"
+  stub-zone:
+    name: "signed.example."
+    stub-addr: 127.0.0.1@5805
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: "127.0.0.1:5805"
+    replies:
+    - qname: "signed.example."
+      qtype: DNSKEY
+      aa: true
+      answer:
+      - "signed.example. 300 IN DNSKEY 257 3 13 /KqfUo9VrjZWU0aj9EC7KIUgL2SyGAgt 2jD+wX0dwXELX8XnB4YoRriV7nrUQH/Q QE8s/RTdWA2qt8E7fThZgA=="
+      - "signed.example. 300 IN RRSIG DNSKEY 13 2 300 20460901000000 20260901000000 51548 signed.example. O/yTTEPP6UEM9Ba/KofSx6oHThyjBvrd XgFz0K6/dpp5TiSgjPky+BUaLkN4dVQw PVKK8hVT+mW5DZZvMn1pFw=="
+    - qname: "bad.signed.example."
+      qtype: A
+      aa: true
+      answer:
+      - "bad.signed.example. 300 IN A 192.0.2.99"
+      - "bad.signed.example. 300 IN RRSIG A 13 3 300 20460901000000 20260901000000 51548 signed.example. fQDZqd6obmGaCQnf8re2XKol6tOFCN4v WfDk2vBy1wMVpq30BpCnHWiWnN/d23CN M1wY6G+vl6o+e6XV3E10Ug=="
+    received_contains:
+    - "signed.example. DNSKEY"
+  query: "bad.signed.example. A"
+  query_flags:
+  - cd
+  rcode: "NOERROR"
+  answer_contains:
+  - "bad.signed.example. 60 IN A 192.0.2.99"
+  flags_contains:
+  - cd
+  flags_not_contains:
+  - ad
+  note:
+    en: "The DNSKEY is still fetched: validation runs, only the outcome is not enforced. The TTL is val-bogus-ttl (default 60), not the 300 the server sent; the case was first written expecting 300, which the run did not confirm. Same fake server as dnssec-bogus-answer-is-servfail"
+    ja: "DNSKEY は取りに行く。検証は行われ、結果を強制しないだけ。TTL は相手が返した 300 ではなく val-bogus-ttl（既定 60）になる。最初は 300 と予測して書いたが、実行で確かめられなかった。偽の権威 DNS サーバーは dnssec-bogus-answer-is-servfail と同じ"

@@ -1,0 +1,45 @@
+id: qname-minimisation-aaaa-asks-a-at-full-name-first
+title:
+  en: "For an AAAA question, QNAME minimisation reaches the full name with QTYPE A before it sends the AAAA query"
+  ja: AAAA の問い合わせでも、QNAME minimisation は元の名前まで QTYPE A で伸ばし、その後で AAAA を送る
+chapter: "7.2"
+category: B
+versions: ["1.26.0"]
+source:
+  en: "iterator/iterator.c processQueryTargets(): minimising stops only when labdiff < 1, or labdiff < 2 and the chased QTYPE is A or DS. For AAAA the step with labdiff 1 still sends qinfo_out, whose QTYPE is the A set in INIT_MINIMISE_STATE, with the full name"
+  ja: "iterator/iterator.c processQueryTargets(): 最小化をやめるのは labdiff < 1、または labdiff < 2 かつ QTYPE が A か DS のときだけ。AAAA では labdiff 1 の段でも、INIT_MINIMISE_STATE で A にした qinfo_out を元の名前で送る"
+manual:
+  en: "doc/unbound.conf.rst qname-minimisation: Only send minimum required labels of the QNAME and set QTYPE to A when possible. (does not say whether the full name is also asked with QTYPE A)"
+  ja: "doc/unbound.conf.rst qname-minimisation の項: Only send minimum required labels of the QNAME and set QTYPE to A when possible.（元の名前でも QTYPE A を先に送るかは書いていない）"
+layers:
+  en: ["outgoing query name (iterator)"]
+  ja: ["送出する問い合わせの名前（iterator）"]
+status: verified
+config: |
+  stub-zone:
+    name: "example.com."
+    stub-addr: 127.0.0.1@5702
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5702"
+      replies:
+        - qname: "www.a.b.example.com."
+          qtype: AAAA
+          aa: true
+          answer: ["www.a.b.example.com. 300 IN AAAA 2001:db8::20"]
+        - qname: "www.a.b.example.com."
+          qtype: A
+          aa: true
+          answer: ["www.a.b.example.com. 300 IN A 192.0.2.20"]
+        - aa: true
+          authority: ["example.com. 300 IN SOA ns.example.com. host.example.com. 1 3600 900 604800 300"]
+      received_first: "b.example.com. A"
+      received_contains: ["b.example.com. A", "a.b.example.com. A", "www.a.b.example.com. A", "www.a.b.example.com. AAAA"]
+  query: "www.a.b.example.com. AAAA"
+  rcode: "NOERROR"
+  answer_contains: ["www.a.b.example.com. 300 IN AAAA 2001:db8::20"]
+  note:
+    en: "RFC 9156 Table 2 shows the same sequence (A at the full name, then the original QTYPE). The order of the last two queries is not checked by the harness; see the note in the report"
+    ja: "RFC 9156 の Table 2 と同じ流れ（元の名前で A、その後に元の QTYPE）。最後の 2 つの順序はハーネスでは判定していない。レポートの受信順を参照"

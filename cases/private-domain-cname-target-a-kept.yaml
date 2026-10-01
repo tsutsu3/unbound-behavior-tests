@@ -1,0 +1,44 @@
+id: private-domain-cname-target-a-kept
+title:
+  en: "An outside name that is a CNAME to a name under private-domain gets the private address through: the A record is checked under the CNAME target's name"
+  ja: private-domain の名前を CNAME で指す外部の名前では、CNAME の先の A は先の名前で照合され、private-address に当たっても取り除かれない
+chapter: "7.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "iterator/iter_scrub.c scrub_sanitize() cuts the remainder of a CNAME chain off the answer and the iterator resolves the target on its own; iterator/iter_priv.c priv_rrset_bad() looks up the RRset owner name with priv_lookup_name(), so the target's A under private-domain is kept"
+  ja: "iterator/iter_scrub.c scrub_sanitize() は CNAME の連鎖の残りを応答から切り落とし、先の名前は iterator が改めて解決する。iterator/iter_priv.c priv_rrset_bad() は RRset の owner 名で priv_lookup_name() を引くので、private-domain の下の先の A は残る"
+manual:
+  en: "none (private-domain says the domain and its subdomains may contain private addresses, but not how a CNAME from outside is handled)"
+  ja: "none（private-domain の項はそのドメインと配下がプライベートアドレスを持てると書くが、外からの CNAME の扱いは書いていない）"
+layers:
+  en: ["response scrubbing"]
+  ja: ["応答の洗浄"]
+status: verified
+config: |
+  private-address: 192.168.0.0/16
+  private-domain: "corp.example."
+  forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5710
+command: run-with-upstreams
+expect:
+  checkconf_exit: 0
+  upstreams:
+    - addr: "127.0.0.1:5710"
+      replies:
+        - qname: "evil.example.net."
+          qtype: A
+          answer:
+            - "evil.example.net. 300 IN CNAME www.corp.example."
+            - "www.corp.example. 300 IN A 192.168.1.10"
+        - qname: "www.corp.example."
+          qtype: A
+          answer: ["www.corp.example. 300 IN A 192.168.1.10"]
+      received_contains: ["evil.example.net. A"]
+  query: "evil.example.net. A"
+  rcode: "NOERROR"
+  answer_contains: ["evil.example.net. 300 IN CNAME www.corp.example.", "www.corp.example. 300 IN A 192.168.1.10"]
+  note:
+    en: "No trust anchor is configured in the harness. Compare private-domain-keeps-forwarded-a and private-address-removes-forwarded-a"
+    ja: "ハーネスには信頼アンカーがない。private-domain-keeps-forwarded-a、private-address-removes-forwarded-a と比べる"

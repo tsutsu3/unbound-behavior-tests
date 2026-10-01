@@ -21,7 +21,7 @@ import tempfile
 
 import pytest
 
-from runner import unbound, upstream
+from runner import tls, unbound, upstream
 from runner.cases import Case, load_cases
 
 CASES = load_cases()
@@ -62,9 +62,14 @@ class Report:
 
     def check_not_contains(self, what: str, needle: str, haystack: str) -> None:
         if needle in haystack:
+            # Show the lines that contain it: the tail of a long log rarely
+            # includes the line that matters.
+            hits = [ln for ln in haystack.splitlines() if needle in ln] or [
+                haystack.strip()[-2000:]
+            ]
             self.diffs.append(
                 f"  {what}\n    expected not to contain: {needle!r}\n"
-                f"    actual:                  {haystack.strip()[-2000:]!r}"
+                f"    lines that contain it:   {hits[:10]!r}"
             )
 
     def note(self, line: str) -> None:
@@ -122,7 +127,9 @@ def _checkconf_gate(
     case: Case, tmp: pathlib.Path, report: Report, port: int = unbound.UNBOUND_PORT
 ):
     """Every runtime case also states what checkconf did with the config."""
-    conf = unbound.write_config(tmp, case.config, case.files, port)
+    conf = unbound.write_config(
+        tmp, case.config, case.files, port, case.expect.get("client")
+    )
     result = unbound.run_checkconf(conf)
     report.note(f"unbound-checkconf exit={result.exit_code}")
     if "checkconf_exit" in case.expect:
@@ -177,19 +184,34 @@ def _run_dig_case(case: Case, tmp: pathlib.Path, report: Report, opts) -> None:
             report.check("unbound started", True, False)
             report.finish()
             return
-        answer = unbound.send_query(case.expect["query"])
-        if answer is None:
+        answer = _send(case)
+        if case.expect.get("no_reply"):
+            report.check("no reply", None, answer and answer.to_text())
+        elif answer is None:
             report.note(f"unbound stderr:\n{proc.stderr}")
             report.check("got a reply", True, False)
             report.finish()
             return
-        _check_answer(case, report, answer)
-        # The same question again, this time through dig, for the book to
-        # include.  The checks above stay on the dnspython reply.
-        _save_dig(case, opts)
+        else:
+            _check_answer(case, report, answer)
+            # The same question again, this time through dig, for the book to
+            # include.  The checks above stay on the dnspython reply.
+            _save_dig(case, opts)
     # Read the daemon log only after it has been stopped, so nothing is
     # still buffered in the pipe.
     _check_stderr(case, report, proc.stderr)
+
+
+def _send(case: Case, timeout: float = 3.0):
+    """Send the case's query the way its expect says: flags, EDNS, client."""
+    e = case.expect
+    return unbound.send_query(
+        e["query"],
+        timeout=timeout,
+        flags=tuple(e.get("query_flags", ())),
+        edns="ede_code" in e or "ede_text_contains" in e,
+        addr=unbound.client_address(e.get("client")),
+    )
 
 
 def _check_stderr(case: Case, report: Report, stderr: str) -> None:
@@ -203,6 +225,8 @@ def _check_stderr(case: Case, report: Report, stderr: str) -> None:
 
 def _check_answer(case: Case, report: Report, answer) -> None:
     """The client side checks shared by run-and-dig and run-with-upstreams."""
+    import dns.edns
+    import dns.flags
     import dns.rcode
 
     report.note(f"reply: {answer.rcode()!r} answer section: {answer.answer!r}")
@@ -220,6 +244,22 @@ def _check_answer(case: Case, report: Report, answer) -> None:
     authority = "\n".join(rr.to_text() for rr in answer.authority)
     for needle in case.expect.get("authority_contains", []):
         report.check_contains("authority section", needle, authority)
+    flags = dns.flags.to_text(answer.flags).lower().split()
+    report.note(f"reply flags: {flags}")
+    for flag in case.expect.get("flags_contains", []):
+        report.check(f"reply has flag {flag}", True, flag in flags)
+    for flag in case.expect.get("flags_not_contains", []):
+        report.check(f"reply lacks flag {flag}", True, flag not in flags)
+    edes = [o for o in answer.options if o.otype == dns.edns.OptionType.EDE]
+    report.note(f"reply EDE: {[(int(o.code), o.text) for o in edes]}")
+    if "ede_code" in case.expect:
+        report.check("EDE code", [case.expect["ede_code"]], [int(o.code) for o in edes])
+    if "ede_text_contains" in case.expect:
+        report.check_contains(
+            "EDE text",
+            case.expect["ede_text_contains"],
+            "\n".join(o.text or "" for o in edes),
+        )
 
 
 _DIG_ID = re.compile(r"id: \d+")
@@ -237,7 +277,12 @@ def _save_dig(case: Case, opts) -> None:
         return
     opts.dig_out.mkdir(parents=True, exist_ok=True)
     path = opts.dig_out / f"{case.id}.txt"
-    text = unbound.dig_text(case.expect["query"])
+    flags = case.expect.get("query_flags")
+    text = unbound.dig_text(
+        case.expect["query"],
+        flags=None if flags is None else tuple(flags),
+        addr=unbound.client_address(case.expect.get("client")),
+    )
     if path.exists():
         old = path.read_text(encoding="utf-8")
         if _DIG_ID.sub("id: N", old) == _DIG_ID.sub("id: N", text):
@@ -248,7 +293,16 @@ def _save_dig(case: Case, opts) -> None:
 #: How long run-with-upstreams waits for what an upstream must receive.
 UPSTREAM_WAIT = 8.0
 
-CLIENT_CHECKS = ("rcode", "answer_contains", "answer_count", "authority_contains")
+CLIENT_CHECKS = (
+    "rcode",
+    "answer_contains",
+    "answer_count",
+    "authority_contains",
+    "flags_contains",
+    "flags_not_contains",
+    "ede_code",
+    "ede_text_contains",
+)
 
 
 def _run_upstreams_case(case: Case, tmp: pathlib.Path, report: Report, opts) -> None:
@@ -259,8 +313,11 @@ def _run_upstreams_case(case: Case, tmp: pathlib.Path, report: Report, opts) -> 
     ups = []
     for spec in specs:
         addr, _, port = spec["addr"].rpartition(":")
+        ctx = tls.server_context(tmp, spec["tls"]["name"]) if "tls" in spec else None
         ups.append(
-            upstream.ServingUpstream(spec["proto"], addr, int(port), spec["replies"])
+            upstream.ServingUpstream(
+                spec["proto"], addr, int(port), spec["replies"], ctx
+            )
         )
     with contextlib.ExitStack() as stack:
         for up in ups:
@@ -271,7 +328,7 @@ def _run_upstreams_case(case: Case, tmp: pathlib.Path, report: Report, opts) -> 
             report.check("unbound started", True, False)
             report.finish()
             return
-        answer = unbound.send_query(case.expect["query"], timeout=6.0)
+        answer = _send(case, timeout=6.0)
         # Give what must arrive a chance to arrive, then look.
         deadline = time.monotonic() + UPSTREAM_WAIT
         while time.monotonic() < deadline:
@@ -292,8 +349,21 @@ def _run_upstreams_case(case: Case, tmp: pathlib.Path, report: Report, opts) -> 
         got = up.snapshot()
         report.note(
             f"{up.where} received: {[(r.spec(), r.rd, r.proto) for r in got]} "
-            f"first bytes: {[b.hex() for b in up.first_bytes]}"
+            f"first bytes: {[b.hex() for b in up.first_bytes]} "
+            f"tls handshakes: {up.tls_completed} completed, {up.tls_failed} failed"
         )
+        if "tls_handshake" in spec:
+            # completed: at least one handshake went through and none failed.
+            # failed: at least one failed and none went through.
+            report.check(
+                f"{up.where} TLS handshakes (completed, failed)",
+                spec["tls_handshake"],
+                "completed"
+                if up.tls_completed and not up.tls_failed
+                else "failed"
+                if up.tls_failed and not up.tls_completed
+                else f"{up.tls_completed} completed, {up.tls_failed} failed",
+            )
         specs_got = [r.spec() for r in got]
         for need in spec.get("received_contains", []):
             report.check(f"{up.where} received {need!r}", True, need in specs_got)
@@ -317,7 +387,9 @@ def _run_upstreams_case(case: Case, tmp: pathlib.Path, report: Report, opts) -> 
                 True,
                 bool(up.first_bytes) and all(b[:1] == b"\x16" for b in up.first_bytes),
             )
-    if any(k in case.expect for k in CLIENT_CHECKS):
+    if case.expect.get("no_reply"):
+        report.check("no reply", None, answer and answer.to_text())
+    elif any(k in case.expect for k in CLIENT_CHECKS):
         if answer is None:
             report.check("got a reply", True, False)
         else:

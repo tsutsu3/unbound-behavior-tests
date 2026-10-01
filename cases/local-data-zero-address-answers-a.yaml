@@ -1,0 +1,30 @@
+id: local-data-zero-address-answers-a
+title:
+  en: "A static zone with local-data A 0.0.0.0 at the apex answers 0.0.0.0 for A"
+  ja: "static のゾーンの頂点に A 0.0.0.0 の local-data を書くと、A の問い合わせに 0.0.0.0 が返る"
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c local_data_answer() finds the apex local_data node and its A rrset and answers with it; the address 0.0.0.0 is ordinary rdata to sldns_str2wire_rr_buf() and gets no special treatment"
+  ja: "services/localzone.c local_data_answer() が頂点の local_data ノードと A の RRset を見つけてそれで答える。0.0.0.0 は sldns_str2wire_rr_buf() にとって通常の rdata で、特別扱いはない"
+manual:
+  en: "none (the local-data entry does not mention 0.0.0.0)"
+  ja: "none（local-data の項は 0.0.0.0 に触れていない）"
+layers:
+  en: ["local data answering"]
+  ja: ["local data からの応答"]
+status: verified
+config: |
+  local-zone: "ads.example." static
+  local-data: "ads.example. A 0.0.0.0"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "ads.example. A"
+  rcode: "NOERROR"
+  answer_count: 1
+  answer_contains: ["ads.example. 3600 IN A 0.0.0.0"]
+  note:
+    en: "The zero-address recipe of the book, as written. A name below the apex gets NXDOMAIN (local-zone-static-unknown-name-nxdomain) and AAAA at the apex gets NODATA (local-zone-static-missing-type-nodata)"
+    ja: "本書の 0.0.0.0 を返すレシピの設定をそのまま動かしたもの。頂点の下の名前は NXDOMAIN（local-zone-static-unknown-name-nxdomain）、頂点の AAAA は NODATA（local-zone-static-missing-type-nodata）"
