@@ -85,10 +85,12 @@ uv run ruff format .
 
 本の Appendix「未文書化の挙動」のページは、本の本文を入力にして別に生成する。
 各項目を、そのケースを脚注で引いている本文のページへ結び付けるためで、出力は
-`out/` ではなく指定したディレクトリへ直接書く。
+`out/` ではなく指定したディレクトリへ直接書く。分類 C と B は無料ページ、分類 A は有料ページ
+(`undocumented-a-*`) に分かれるので、出力先を 2 つ渡す。
 
 ```sh
-uv run python gen.py --book <本の src/content/docs/ja> --book-out <出力先>
+uv run python gen.py --book <本の src/content/docs/ja> \
+    --book-out <無料ページの出力先> --book-paid-out <有料ページの出力先>
 ```
 
 ## ケースの書き方

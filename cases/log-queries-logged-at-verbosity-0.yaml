@@ -28,4 +28,4 @@ expect:
   stderr_contains: "info: 127.0.0.1 www.example.com. A IN\n"
   note:
     en: "The line starts with the usual [timestamp] unbound[pid:thread] prefix. Compare log-replies-logged-at-verbosity-0"
-    ja: "行の頭には通常の [時刻] unbound[pid:スレッド] が付く。log-replies-logged-at-verbosity-0 と比べる"
+    ja: "行の頭には通常の `[時刻] unbound[pid:スレッド]` が付く。`log-replies-logged-at-verbosity-0` と比べる"

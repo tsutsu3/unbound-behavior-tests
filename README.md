@@ -93,8 +93,12 @@ with the book's body pages as input: each item is tied to the body page whose
 footnote cites its case. They are written straight into the given directory,
 not into `out/`.
 
+Categories C and B go to free pages and category A to paid pages
+(`undocumented-a-*`), so two output directories are given.
+
 ```sh
-uv run python gen.py --book <book src/content/docs/ja> --book-out <dir>
+uv run python gen.py --book <book src/content/docs/ja> \
+    --book-out <dir for free pages> --book-paid-out <dir for paid pages>
 ```
 
 ## Writing a case

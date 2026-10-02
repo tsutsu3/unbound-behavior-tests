@@ -1,7 +1,7 @@
 id: acl-default-allows-ipv6-loopback
 title:
   en: "Without any access-control line, a query from ::1 is allowed, although the manual names only 127.0.0.0/8"
-  ja: "access-control を1行も書かなくても、::1 からの問い合わせは許可される。man が挙げるのは 127.0.0.0/8 だけ"
+  ja: "access-control を1行も書かなくても、::1 からの問い合わせは許可される（説明に載っている既定は 127.0.0.0/8 だけ）"
 chapter: "7.1"
 category: B
 versions:

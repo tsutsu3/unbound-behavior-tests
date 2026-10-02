@@ -210,18 +210,41 @@ def main() -> int:
     parser.add_argument(
         "--book-out",
         type=pathlib.Path,
-        help="where to write those pages (required with --book)",
+        help="where to write the free pages (required with --book)",
+    )
+    parser.add_argument(
+        "--book-paid-out",
+        type=pathlib.Path,
+        help="where to write the paid pages (required with --book)",
     )
     args = parser.parse_args()
     cases = load_cases()
     if args.book is not None:
-        if args.book_out is None:
-            parser.error("--book needs --book-out")
-        args.book_out.mkdir(parents=True, exist_ok=True)
+        if args.book_out is None or args.book_paid_out is None:
+            parser.error("--book needs --book-out and --book-paid-out")
         files = book.render(cases, args.book)
-        for name, text in files.items():
-            (args.book_out / name).write_text(text, encoding="utf-8")
-        print(f"wrote {len(files)} pages into {args.book_out}/")
+        for out, paid in ((args.book_out, False), (args.book_paid_out, True)):
+            out.mkdir(parents=True, exist_ok=True)
+            wanted = {
+                name: text
+                for name, text in files.items()
+                if name.startswith(book.PAID_PREFIX) == paid
+            }
+            # Pages whose items are gone must not linger.  Only regular files
+            # this script wrote are removed: the book links paid pages into
+            # its tree, and a link is not ours to delete.
+            for stale in out.glob("undocumented-*.md"):
+                if stale.is_symlink():
+                    if stale.name in wanted:
+                        parser.error(f"{stale} is a symbolic link; unlink it first")
+                    continue
+                if stale.name not in wanted and book.MARKER in stale.read_text(
+                    encoding="utf-8"
+                ):
+                    stale.unlink()
+            for name, text in wanted.items():
+                (out / name).write_text(text, encoding="utf-8")
+            print(f"wrote {len(wanted)} pages into {out}/")
         return 0
     OUT.mkdir(exist_ok=True)
     for lang in LANGS:
