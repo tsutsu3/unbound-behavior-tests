@@ -10,11 +10,12 @@ book at hand.
 The book publishes categories C and B on the web and keeps category A for
 the PDF / EPUB edition.
 
-Free page (no `access`), written to --book-out:
+Free pages (no `access`), written to --book-out, one per category:
 
-* `undocumented-index.md` -- every C and B item on one page, C first, in the
-  book's reading order, with the configuration, the result and the evidence.
-  The headings are the table of contents.
+* `undocumented-c.md` -- every C item, in the book's reading order, with the
+  configuration, the result and the evidence.  The page starts with a table
+  that links to its items.
+* `undocumented-b.md` -- the same for the B items.
 
 Paid pages (`access: private`), written to --book-paid-out:
 
@@ -35,6 +36,7 @@ page.
 import json
 import pathlib
 import re
+import unicodedata
 
 from runner.cases import Case
 
@@ -65,7 +67,13 @@ PAID = ("A",)
 #: Paid pages carry this in their file name; the book's config and .gitignore
 #: match on it.
 PAID_PREFIX = "undocumented-a-"
-FREE_INDEX = "/ja/appendix/undocumented-index/"
+#: The free page of each category.
+FREE_PAGE = {cat: f"/ja/appendix/undocumented-{cat.lower()}/" for cat in FREE}
+#: What each free page says about its own category.
+FREE_INTRO = {
+    "C": "公式の説明に書いてあるとおりなのに、結果が直感に反するもの",
+    "B": "公式の説明と実際の動作が食い違うもの、または説明があいまいなもの",
+}
 PAID_INDEX = "/ja/appendix/undocumented-a-index/"
 
 #: Directories whose pages are body pages in the book's reading order.
@@ -171,6 +179,22 @@ def md(text: str) -> str:
         part if i % 2 else re.sub(r"([\\*<>\[\]])", r"\\\1", part)
         for i, part in enumerate(parts)
     )
+
+
+def heading_anchor(title: str) -> str:
+    """The id the book's web build gives a heading with this text.
+
+    It follows github-slugger: lower case, spaces to hyphens, and everything
+    that is not a letter, a mark, a number, `-` or `_` dropped.  Backquotes
+    only mark code and are not part of the text.
+    """
+    out = []
+    for ch in title.replace("`", "").lower():
+        if ch == " ":
+            out.append("-")
+        elif ch in "-_" or unicodedata.category(ch)[0] in "LMN":
+            out.append(ch)
+    return "".join(out)
 
 
 def cell(text: str) -> str:
@@ -385,7 +409,13 @@ def render(cases: list[Case], docs: pathlib.Path) -> dict[str, str]:
     free = [(c, p) for c, p in items if c.category in FREE]
     paid = [(c, p) for c, p in items if c.category in PAID]
 
-    files = {"undocumented-index.md": free_page(free, len(paid))}
+    counts = {cat: sum(1 for c, _ in items if c.category == cat) for cat in ORDER}
+    files = {
+        f"undocumented-{cat.lower()}.md": free_page(
+            cat, [(c, p) for c, p in free if c.category == cat], counts
+        )
+        for cat in FREE
+    }
 
     # Paid items: one page per chapter, the rest on `other`.
     chapters: dict[str, list[tuple[Case, BookPage | None]]] = {}
@@ -416,33 +446,45 @@ def categories_footnote() -> str:
     )
 
 
-def free_page(items: list[tuple[Case, BookPage | None]], paid_count: int) -> str:
-    counts = {cat: sum(1 for c, _ in items if c.category == cat) for cat in FREE}
-    counts.update({cat: paid_count for cat in PAID})
+def free_links() -> str:
+    return "と".join(f"[{LABELS[cat]}]({FREE_PAGE[cat]})" for cat in FREE)
+
+
+def free_page(
+    cat: str, items: list[tuple[Case, BookPage | None]], counts: dict[str, int]
+) -> str:
     out = [
         frontmatter(
-            "未文書化の挙動",
-            f"公式の説明と食い違う、または説明どおりでも意外な Unbound {VERSION} の挙動を、設定と結果と根拠で示します。",
+            LABELS[cat],
+            f"{FREE_INTRO[cat]}を、Unbound {VERSION} で確かめた設定と結果と根拠で示します。",
             paid=False,
         ),
         (
-            f"Unbound {VERSION} で確かめた挙動のうち、公式の説明だけでは予想できないものを、"
-            "分類ごとに並べています[^categories]。各項目に、確かめた設定、結果、根拠を付けています。\n"
+            f"Unbound {VERSION} で確かめた挙動のうち、{FREE_INTRO[cat]}を並べています[^categories]。"
+            "下の表から、項目ごとの設定、結果、根拠へ飛べます。\n"
         ),
         "| 分類 | 内容 | 件数 |\n| --- | --- | --- |",
     ]
-    out.extend(f"| {cat} | {LABELS[cat]} | {counts[cat]} |" for cat in ORDER)
-    out.append(
-        "\n分類 C は、説明を読んでいても踏む挙動なので、先頭に置いています。"
-        f"分類 A は[説明のない挙動の一覧]({PAID_INDEX})にまとめています。\n"
-    )
-    out.append(f"{CONFIG_NOTE}\n")
-    for cat in FREE:
-        group = [(c, p) for c, p in items if c.category == cat]
-        if not group:
-            continue
-        out.append(f"## 分類 {cat}: {LABELS[cat]}\n")
-        out.extend(item(c, p) for c, p in group)
+    for other in ORDER:
+        if other == cat:
+            name = f"{LABELS[other]}（このページ）"
+        elif other in FREE:
+            name = f"[{LABELS[other]}]({FREE_PAGE[other]})"
+        else:
+            name = f"[{LABELS[other]}]({PAID_INDEX})"
+        out.append(f"| {other} | {name} | {counts[other]} |")
+    out.append(f"\n{CONFIG_NOTE}\n")
+    # The table of contents.  The links carry the page path so that the PDF
+    # build, which has its own heading ids, still resolves them (to the page).
+    out.append("| 挙動 | 本文 |\n| --- | --- |")
+    for c, p in items:
+        title = c.title["ja"]
+        body = f"[{p.title}]({p.url})" if p is not None else "—"
+        out.append(
+            f"| [{cell(md(title))}]({FREE_PAGE[cat]}#{heading_anchor(title)}) | {body} |"
+        )
+    out.append("")
+    out.extend(item(c, p, level=2) for c, p in items)
     notes = [categories_footnote()] + [footnote(c) for c, _ in items]
     out.append("\n".join(notes) + "\n")
     return "\n".join(out)
@@ -462,7 +504,7 @@ def paid_chapter_page(key: str, items: list[tuple[Case, BookPage | None]]) -> st
         frontmatter(title, description, paid=True, hidden=True),
         (
             f"{scope}\n\n{CONFIG_NOTE}"
-            f"分類 C と B の挙動は[未文書化の挙動]({FREE_INDEX})にあります。\n"
+            f"分類 C と B の挙動は、{free_links()}にあります。\n"
         ),
     ]
     if key == "other":
@@ -491,7 +533,7 @@ def paid_index_page(rows: list[tuple[Case, str, str]]) -> str:
             f"Unbound {VERSION} で確かめた挙動のうち、公式の説明に書かれていないもの"
             f"（分類 A、{len(rows)} 件）を一覧にしています[^categories]。"
             "挙動の欄のリンク先に、各項目の設定、結果、根拠があります。"
-            f"分類 C と B は[未文書化の挙動]({FREE_INDEX})にあります。\n"
+            f"分類 C と B は、{free_links()}にあります。\n"
         ),
         "| 挙動 | 本文 |\n| --- | --- |",
     ]
