@@ -3,7 +3,7 @@ title:
   en: "When private-address removes one address from a signed RRset, the signature no longer verifies and the answer is SERVFAIL"
   ja: "private-address が署名された RRset からアドレスを1つ取り除くと、署名を検証できなくなり、答えは SERVFAIL になる"
 chapter: "7.3"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -49,5 +49,5 @@ expect:
   rcode: "SERVFAIL"
   answer_count: 0
   note:
-    en: "Category undecided: the result matches the manual. The RRset has 192.0.2.83 and 192.168.1.10 and is correctly signed as a whole"
-    ja: "分類 undecided: man の記述どおり。RRset は 192.0.2.83 と 192.168.1.10 を持ち、全体としては正しく署名されている"
+    en: "Category documented: the result matches the manual. The RRset has 192.0.2.83 and 192.168.1.10 and is correctly signed as a whole"
+    ja: "分類 documented: man の記述どおり。RRset は 192.0.2.83 と 192.168.1.10 を持ち、全体としては正しく署名されている"

@@ -3,7 +3,7 @@ title:
   en: "val-log-level: 2 logs one line per failed query with the reason and the server the data came from, at verbosity 0"
   ja: "val-log-level: 2 は、verbosity: 0 でも、失敗した問い合わせごとに理由とデータの送り元を1行で書く"
 chapter: "8.5"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -49,5 +49,5 @@ expect:
   rcode: "SERVFAIL"
   stderr_contains: "info: validation failure <bad.signed.example. A IN>: signature crypto failed from 127.0.0.1"
   note:
-    en: "Category undecided: the result matches the manual. The reason for a signature that does not verify is \"signature crypto failed\" (validator/val_secalgo.c)"
-    ja: "分類 undecided: man の記述どおり。署名を検証できないときの理由は \"signature crypto failed\"（validator/val_secalgo.c）"
+    en: "Category documented: the result matches the manual. The reason for a signature that does not verify is \"signature crypto failed\" (validator/val_secalgo.c)"
+    ja: "分類 documented: man の記述どおり。署名を検証できないときの理由は \"signature crypto failed\"（validator/val_secalgo.c）"

@@ -3,7 +3,7 @@ title:
   en: "With a CA bundle but no #name, a certificate issued by that CA is accepted whatever name it carries"
   ja: "CA 証明書があって #name がなければ、その CA が発行した証明書は名前にかかわらず受け入れられる"
 chapter: "7.4"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -47,5 +47,5 @@ expect:
   - "www.example.com. 300 IN A 192.0.2.10"
   stderr_contains: "SSL connection authenticated"
   note:
-    en: "Category undecided: the result matches the manual. Any server holding a certificate from the same CA passes"
-    ja: "分類 undecided: man の記述どおり。同じ CA の証明書を持つサーバーなら、どれでも通る"
+    en: "Category documented: the result matches the manual. Any server holding a certificate from the same CA passes"
+    ja: "分類 documented: man の記述どおり。同じ CA の証明書を持つサーバーなら、どれでも通る"

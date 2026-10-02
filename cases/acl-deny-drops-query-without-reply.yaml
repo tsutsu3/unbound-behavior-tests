@@ -3,7 +3,7 @@ title:
   en: "With access-control deny, the client gets no reply at all"
   ja: "access-control の deny では、クライアントに応答が返らない"
 chapter: "7.1"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -31,5 +31,5 @@ expect:
   query: "www.example.com. A"
   no_reply: true
   note:
-    en: "Category undecided: the result matches the manual. The harness waits 3 seconds for a reply. Compare acl-default-refuses-non-loopback-client, where the same client gets REFUSED"
-    ja: "分類 undecided: man の記述どおり。ハーネスは応答を3秒待つ。同じクライアントに REFUSED が返る acl-default-refuses-non-loopback-client と比べる"
+    en: "Category documented: the result matches the manual. The harness waits 3 seconds for a reply. Compare acl-default-refuses-non-loopback-client, where the same client gets REFUSED"
+    ja: "分類 documented: man の記述どおり。ハーネスは応答を3秒待つ。同じクライアントに REFUSED が返る acl-default-refuses-non-loopback-client と比べる"

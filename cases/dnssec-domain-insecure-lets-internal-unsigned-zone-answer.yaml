@@ -3,7 +3,7 @@ title:
   en: "With domain-insecure for the internal zone, the public DS is ignored and the unsigned answer is returned without the AD bit"
   ja: "内部ゾーンを domain-insecure に書くと、公開側の DS は無視され、署名のない答えが AD ビットなしで返る"
 chapter: "8.5"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -68,5 +68,5 @@ expect:
   flags_not_contains:
   - ad
   note:
-    en: "Category undecided: the result matches the manual. Nothing is asked of the public parent at all"
-    ja: "分類 undecided: man の記述どおり。公開側の親には何も問い合わせない"
+    en: "Category documented: the result matches the manual. Nothing is asked of the public parent at all"
+    ja: "分類 documented: man の記述どおり。公開側の親には何も問い合わせない"

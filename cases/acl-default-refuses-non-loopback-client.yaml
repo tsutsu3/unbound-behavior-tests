@@ -3,7 +3,7 @@ title:
   en: "Without any access-control line, a query from a non-loopback address is answered with REFUSED, even for local-data"
   ja: "access-control を1行も書かないと、ループバック以外のアドレスからの問い合わせは、local-data の名前でも REFUSED になる"
 chapter: "7.1"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -28,5 +28,5 @@ expect:
   query: "www.example.com. A"
   rcode: "REFUSED"
   note:
-    en: "Category undecided: the result matches the manual. The harness boilerplate for expect.client has no access-control line and listens on 0.0.0.0; the query goes from the container's non-loopback address to itself"
-    ja: "分類 undecided: man の記述どおり。expect.client のときのハーネスの定型部には access-control の行がなく、0.0.0.0 で待ち受ける。問い合わせはコンテナのループバックでないアドレスから同じアドレスへ送る"
+    en: "Category documented: the result matches the manual. The harness boilerplate for expect.client has no access-control line and listens on 0.0.0.0; the query goes from the container's non-loopback address to itself"
+    ja: "分類 documented: man の記述どおり。expect.client のときのハーネスの定型部には access-control の行がなく、0.0.0.0 で待ち受ける。問い合わせはコンテナのループバックでないアドレスから同じアドレスへ送る"

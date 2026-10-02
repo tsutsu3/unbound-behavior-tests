@@ -29,8 +29,8 @@ The body page of an item is found by searching the book for the case id in
 backquotes, which is how the book's footnotes cite a case.  The `chapter`
 field of a case is not used for this: it predates the book's page layout.
 
-Cases in category `undecided` are left out, and so is D, which has its own
-page.
+Cases in category `documented` (as the man page says, and not surprising)
+and `undecided` are left out, and so is D, which has its own page.
 """
 
 import json
@@ -307,7 +307,7 @@ def result_rows(case: Case) -> list[tuple[str, str]]:
     if "query" in e:
         rows.append(("問い合わせ", code(e["query"])))
     if "rcode" in e:
-        rows.append(("応答コード", code(e["rcode"])))
+        rows.append(("rcode", code(e["rcode"])))
     if "answer_contains" in e:
         rows.append(("ANSWER に含まれるもの", listed(e["answer_contains"])))
     if "answer_count" in e:

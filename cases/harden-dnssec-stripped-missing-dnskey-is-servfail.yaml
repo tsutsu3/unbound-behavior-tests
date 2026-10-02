@@ -3,7 +3,7 @@ title:
   en: "By default, when the DNSKEY of a trust-anchored zone cannot be obtained, names in the zone are SERVFAIL with EDE 9 (DNSKEY Missing)"
   ja: "既定では、信頼アンカーのあるゾーンの DNSKEY を得られないと、そのゾーンの名前は SERVFAIL になり、EDE 9（DNSKEY Missing）が付く"
 chapter: "8.3"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -48,5 +48,5 @@ expect:
   rcode: "SERVFAIL"
   ede_code: 9
   note:
-    en: "Category undecided: the result matches the manual. The fake server answers the DNSKEY query with NOERROR and no data, and the A query without a signature. Compare harden-dnssec-stripped-no-makes-zone-insecure"
-    ja: "分類 undecided: man の記述どおり。偽の権威 DNS サーバーは DNSKEY の問い合わせに NOERROR・データなしで、A の問い合わせに署名なしで答える。harden-dnssec-stripped-no-makes-zone-insecure と比べる"
+    en: "Category documented: the result matches the manual. The fake server answers the DNSKEY query with NOERROR and no data, and the A query without a signature. Compare harden-dnssec-stripped-no-makes-zone-insecure"
+    ja: "分類 documented: man の記述どおり。偽の権威 DNS サーバーは DNSKEY の問い合わせに NOERROR・データなしで、A の問い合わせに署名なしで答える。harden-dnssec-stripped-no-makes-zone-insecure と比べる"

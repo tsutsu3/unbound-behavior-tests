@@ -3,7 +3,7 @@ title:
   en: "When a local-zone and a for-downstream auth-zone cover the same name, the local-zone answers"
   ja: 同じ名前に local-zone と for-downstream の auth-zone があると、local-zone が答える
 chapter: "4.5"
-category: undecided
+category: documented
 versions: ["1.26.0"]
 source:
   en: "daemon/worker.c worker_handle_request() calls local_zones_answer() before auth_zones_downstream_answer() and sends the reply as soon as the local zone answers"
@@ -39,5 +39,5 @@ expect:
   answer_count: 1
   answer_contains: ["192.0.2.1"]
   note:
-    en: "Category undecided: the result matches the manual"
-    ja: "分類 undecided: man の記述どおり"
+    en: "Category documented: the result matches the manual"
+    ja: "分類 documented: man の記述どおり"

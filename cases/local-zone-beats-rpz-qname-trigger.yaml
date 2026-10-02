@@ -3,7 +3,7 @@ title:
   en: "An RPZ QNAME trigger does not override local-data for the same name: the local-zone answers first"
   ja: RPZ の QNAME トリガーは同じ名前の local-data を覆さない。local-zone が先に答える
 chapter: "4.5"
-category: undecided
+category: documented
 versions: ["1.26.0"]
 source:
   en: "daemon/worker.c worker_handle_request() calls local_zones_answer() before rpz_callback_from_worker_request()"
@@ -36,5 +36,5 @@ expect:
   rcode: "NOERROR"
   answer_contains: ["192.0.2.1"]
   note:
-    en: "Category undecided: the result matches the manual. The RPZ rule would give NXDOMAIN (CNAME .) if it were applied. respip is added to module-config because the manual asks for it"
-    ja: "分類 undecided: man の記述どおり。RPZ の規則（CNAME .）が当たれば NXDOMAIN になる。respip は man の指示に従って module-config に加えた"
+    en: "Category documented: the result matches the manual. The RPZ rule would give NXDOMAIN (CNAME .) if it were applied. respip is added to module-config because the manual asks for it"
+    ja: "分類 documented: man の記述どおり。RPZ の規則（CNAME .）が当たれば NXDOMAIN になる。respip は man の指示に従って module-config に加えた"

@@ -105,7 +105,7 @@ title:
   en: "The forward-addr @port is not range-checked and is truncated to uint16"
   ja: forward-addr の @ポートは範囲検証されず uint16 に切り詰められる
 chapter: "6.4"                          # 書籍の節番号。未定なら TBD
-category: A                             # A / B / C / D / undecided
+category: A                             # A / B / C / D / documented (説明どおりで意外でもない) / undecided (判断保留)
 versions: ["1.26.0"]
 source:
   en: "util/net_help.c authextstrtoaddr() does port = atoi(s+1) without a range check"

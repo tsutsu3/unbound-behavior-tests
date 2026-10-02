@@ -3,7 +3,7 @@ title:
   en: "With harden-dnssec-stripped: no, the same zone without a DNSKEY is treated as insecure: the unsigned answer is returned without the AD bit"
   ja: "harden-dnssec-stripped: no では、DNSKEY を得られない同じゾーンが insecure として扱われ、署名のない答えが AD ビットなしで返る"
 chapter: "8.3"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -53,5 +53,5 @@ expect:
   flags_not_contains:
   - ad
   note:
-    en: "Category undecided: the result matches the manual. This is the downgrade the manual warns about: whoever can remove the DNSKEY answer turns validation off for the zone"
-    ja: "分類 undecided: man の記述どおり。man が警告するダウングレードにあたる。DNSKEY の応答を取り除ける者は、そのゾーンの検証を止められる"
+    en: "Category documented: the result matches the manual. This is the downgrade the manual warns about: whoever can remove the DNSKEY answer turns validation off for the zone"
+    ja: "分類 documented: man の記述どおり。man が警告するダウングレードにあたる。DNSKEY の応答を取り除ける者は、そのゾーンの検証を止められる"

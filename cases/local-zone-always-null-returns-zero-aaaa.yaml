@@ -3,7 +3,7 @@ title:
   en: "always_null answers an AAAA query for a name without local-data with :: and TTL 3600"
   ja: "always_null は、local-data のない名前の AAAA の問い合わせに :: を TTL 3600 で返す"
 chapter: "5.3"
-category: undecided
+category: documented
 versions: ["1.26.0"]
 source:
   en: "services/localzone.c local_zones_zone_answer(): in the local_zone_always_null branch, a qtype A query is answered with 0.0.0.0 and a qtype AAAA query with ::, both built with rr_ttl = 3600; any other qtype falls through to the NOERROR/NODATA reply. The branch is reached only when local_data_answer() found no matching local-data"
@@ -25,5 +25,5 @@ expect:
   answer_count: 1
   answer_contains: ["www.ads.example.com. 3600 IN AAAA ::"]
   note:
-    en: "Category undecided: the result matches the manual, which writes the address as ::0"
-    ja: "分類 undecided: man の記述どおり。man はこのアドレスを ::0 と書いている"
+    en: "Category documented: the result matches the manual, which writes the address as ::0"
+    ja: "分類 documented: man の記述どおり。man はこのアドレスを ::0 と書いている"

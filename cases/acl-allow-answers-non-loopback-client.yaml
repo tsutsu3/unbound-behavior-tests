@@ -3,7 +3,7 @@ title:
   en: "With access-control allow for its network, the same non-loopback client gets an answer"
   ja: "そのネットワークに access-control の allow を書くと、同じループバック以外のクライアントに答えが返る"
 chapter: "7.1"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -33,5 +33,5 @@ expect:
   answer_contains:
   - "www.example.com. 3600 IN A 192.0.2.1"
   note:
-    en: "Category undecided: the result matches the manual. The three private ranges are allowed because the container's address differs between hosts. Control for acl-default-refuses-non-loopback-client"
-    ja: "分類 undecided: man の記述どおり。コンテナのアドレスは環境で変わるので、プライベートの3つの範囲を allow にしている。acl-default-refuses-non-loopback-client の対照"
+    en: "Category documented: the result matches the manual. The three private ranges are allowed because the container's address differs between hosts. Control for acl-default-refuses-non-loopback-client"
+    ja: "分類 documented: man の記述どおり。コンテナのアドレスは環境で変わるので、プライベートの3つの範囲を allow にしている。acl-default-refuses-non-loopback-client の対照"

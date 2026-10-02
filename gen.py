@@ -46,7 +46,8 @@ MESSAGES = {
             "A = not described in the man page, "
             "B = described, but the description disagrees with the implementation, "
             "C = the description matches the implementation but the result is "
-            "counter-intuitive, undecided = not decided yet."
+            "counter-intuitive, documented = as described and not surprising, "
+            "undecided = not decided yet."
         ),
         "behaviour_head": (
             "| Category | Section | Behaviour | Evidence (source) | man | Status "
@@ -77,7 +78,7 @@ MESSAGES = {
             "分類は man についての主張である。A = man に記述なし、"
             "B = 記述があるが実装と食い違う、"
             "C = 記述と実装は一致するが結果が直感に反する、"
-            "undecided = 判断保留。"
+            "documented = 説明どおりで意外でもない、undecided = 判断保留。"
         ),
         "behaviour_head": "| 分類 | 節 | 挙動 | 根拠 (source) | man | 状態 | ケース |",
         "diff_title": "# 付録: バージョンによる差分 (分類 D)",
@@ -130,7 +131,9 @@ def table_rule(head: str) -> str:
 
 def behaviour_table(cases: list[Case], lang: str) -> str:
     m = MESSAGES[lang]
-    rows = [c for c in cases if c.category in ("A", "B", "C", "undecided")]
+    rows = [
+        c for c in cases if c.category in ("A", "B", "C", "documented", "undecided")
+    ]
     rows.sort(key=lambda c: (c.category, c.chapter, c.id))
     out = [header(), f"\n{m['behaviour_title']}\n", f"{m['behaviour_intro']}\n"]
     out.append(f"{m['behaviour_head']}\n{table_rule(m['behaviour_head'])}")
@@ -166,7 +169,7 @@ def report(cases: list[Case], lang: str) -> str:
     out = [header(), f"\n{m['summary_title']}\n"]
     out.append(f"{m['by_category']}\n")
     out.append(f"{m['category_head']}\n{table_rule(m['category_head'])}")
-    for cat in ("A", "B", "C", "D", "undecided"):
+    for cat in ("A", "B", "C", "D", "documented", "undecided"):
         out.append(f"| {cat} | {sum(1 for c in cases if c.category == cat)} |")
     out.append(f"| {m['total']} | {len(cases)} |\n")
 

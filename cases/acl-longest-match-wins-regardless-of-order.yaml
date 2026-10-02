@@ -3,7 +3,7 @@ title:
   en: "access-control uses the most specific netblock for the source address, whatever the order of the lines: a /32 refuse beats a /8 written before it and a /24 written after it"
   ja: access-control は行の順序によらず、問い合わせ元に最も長く一致する範囲を使う。/32 の refuse は、前に書いた /8 の allow にも後に書いた /24 の allow にも勝つ
 chapter: "7.1"
-category: undecided
+category: documented
 versions: ["1.26.0"]
 source:
   en: "daemon/acl_list.c acl_list_apply_cfg() inserts every netblock into an addr_tree, and acl_addr_lookup() returns the most specific entry via addr_tree_lookup(); daemon/worker.c worker_handle_request() then calls deny_refuse_all() with acl_refuse before local zones"
@@ -26,5 +26,5 @@ expect:
   query: "www.example.com. A"
   rcode: "REFUSED"
   note:
-    en: "Category undecided: the result matches the manual. The harness boilerplate already has access-control: 127.0.0.0/8 allow before the case lines, and the query comes from 127.0.0.1. refuse also stops local-data from answering"
-    ja: "分類 undecided: man の記述どおり。ハーネスの定型部はケースの行より前に access-control: 127.0.0.0/8 allow を持ち、問い合わせ元は 127.0.0.1。refuse では local-data も答えない"
+    en: "Category documented: the result matches the manual. The harness boilerplate already has access-control: 127.0.0.0/8 allow before the case lines, and the query comes from 127.0.0.1. refuse also stops local-data from answering"
+    ja: "分類 documented: man の記述どおり。ハーネスの定型部はケースの行より前に access-control: 127.0.0.0/8 allow を持ち、問い合わせ元は 127.0.0.1。refuse では local-data も答えない"

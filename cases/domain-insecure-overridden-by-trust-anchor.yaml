@@ -3,7 +3,7 @@ title:
   en: "A trust-anchor for the same name overrides domain-insecure: the zone is validated and a secure answer carries the AD bit"
   ja: "同じ名前に trust-anchor を書くと domain-insecure より優先され、ゾーンは検証されて secure の答えに AD ビットが付く"
 chapter: "8.5"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -53,5 +53,5 @@ expect:
   flags_contains:
   - ad
   note:
-    en: "Category undecided: the result matches the manual. With auto-trust-anchor-file instead of trust-anchor the same combination is a configuration error (domain-insecure-with-auto-trust-anchor-is-config-error)"
-    ja: "分類 undecided: man の記述どおり。trust-anchor の代わりに auto-trust-anchor-file を使うと、同じ組み合わせは設定の誤りになる（domain-insecure-with-auto-trust-anchor-is-config-error）"
+    en: "Category documented: the result matches the manual. With auto-trust-anchor-file instead of trust-anchor the same combination is a configuration error (domain-insecure-with-auto-trust-anchor-is-config-error)"
+    ja: "分類 documented: man の記述どおり。trust-anchor の代わりに auto-trust-anchor-file を使うと、同じ組み合わせは設定の誤りになる（domain-insecure-with-auto-trust-anchor-is-config-error）"

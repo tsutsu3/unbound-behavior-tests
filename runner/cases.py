@@ -18,7 +18,10 @@ CASES_DIR = pathlib.Path(__file__).resolve().parent.parent / "cases"
 STATUSES = ("verified", "needs-test", "inconclusive")
 
 #: Classification of the claim *about the manual*.  See README.
-CATEGORIES = ("A", "B", "C", "D", "undecided")
+#: `documented` marks behaviour that matches the man page and is not surprising:
+#: none of A to D applies, and the case is there as a control or to pin the
+#: behaviour.  `undecided` means nobody has judged it yet.
+CATEGORIES = ("A", "B", "C", "D", "documented", "undecided")
 
 #: Every prose field is written in each of these languages.  English comes
 #: first because it is the repository's primary language; Japanese is kept

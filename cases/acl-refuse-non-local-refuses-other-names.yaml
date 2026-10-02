@@ -3,7 +3,7 @@ title:
   en: "Under refuse_non_local a name that no local zone covers is refused before it reaches the cache or the iterator"
   ja: refuse_non_local では、どの local zone にも入らない名前はキャッシュと iterator の前で REFUSED になる
 chapter: "4.5"
-category: undecided
+category: documented
 versions: ["1.26.0"]
 source:
   en: "daemon/worker.c worker_handle_request(): after local_zones_answer() declines, deny_refuse_non_local() calls deny_refuse() with acl_refuse_non_local, which encodes REFUSED before answer_from_cache() and mesh_new_client()"
@@ -25,5 +25,5 @@ expect:
   query: "www.example.net. A"
   rcode: "REFUSED"
   note:
-    en: "Category undecided: the result matches the manual. Control for acl-refuse-non-local-still-answers-local-data: it shows the refuse_non_local line is in effect for the querying address"
-    ja: "分類 undecided: man の記述どおり。acl-refuse-non-local-still-answers-local-data の対照で、問い合わせ元に refuse_non_local が当たっていることを示す"
+    en: "Category documented: the result matches the manual. Control for acl-refuse-non-local-still-answers-local-data: it shows the refuse_non_local line is in effect for the querying address"
+    ja: "分類 documented: man の記述どおり。acl-refuse-non-local-still-answers-local-data の対照で、問い合わせ元に refuse_non_local が当たっていることを示す"

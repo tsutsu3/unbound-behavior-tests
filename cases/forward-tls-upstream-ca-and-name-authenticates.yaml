@@ -3,7 +3,7 @@ title:
   en: "With a CA bundle and a matching #name, the upstream TLS handshake completes and Unbound logs the connection as authenticated"
   ja: "CA 証明書と一致する #name があれば、上流への TLS のハンドシェイクは完了し、Unbound は接続を authenticated とログに書く"
 chapter: "7.4"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -49,5 +49,5 @@ expect:
   - "www.example.com. 300 IN A 192.0.2.10"
   stderr_contains: "SSL connection to dot.example.net authenticated"
   note:
-    en: "Category undecided: the result matches the manual. The fake forwarder terminates TLS with a certificate for dot.example.net issued by a CA made for this run (harness-ca.pem)"
-    ja: "分類 undecided: man の記述どおり。偽の転送先は、この実行のために作った CA（harness-ca.pem）が発行した dot.example.net の証明書で TLS を終端する"
+    en: "Category documented: the result matches the manual. The fake forwarder terminates TLS with a certificate for dot.example.net issued by a CA made for this run (harness-ca.pem)"
+    ja: "分類 documented: man の記述どおり。偽の転送先は、この実行のために作った CA（harness-ca.pem）が発行した dot.example.net の証明書で TLS を終端する"

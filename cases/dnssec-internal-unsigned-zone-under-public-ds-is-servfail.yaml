@@ -3,7 +3,7 @@ title:
   en: "An unsigned internal zone reached through a forward-zone is SERVFAIL when the public parent publishes a DS for it"
   ja: "forward-zone で引く署名のない内部ゾーンは、公開側の親がそのゾーンの DS を出していると SERVFAIL になる"
 chapter: "8.5"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -63,5 +63,5 @@ expect:
   rcode: "SERVFAIL"
   answer_count: 0
   note:
-    en: "Category undecided: the result matches the manual. The public parent example. (stub-zone, signed, trust anchor) and the internal corp.example. (forward-zone, unsigned) are two fake servers. Compare dnssec-domain-insecure-lets-internal-unsigned-zone-answer"
-    ja: "分類 undecided: man の記述どおり。公開側の親 example.（stub-zone、署名あり、信頼アンカー）と、内部の corp.example.（forward-zone、署名なし）は別々の偽のサーバー。dnssec-domain-insecure-lets-internal-unsigned-zone-answer と比べる"
+    en: "Category documented: the result matches the manual. The public parent example. (stub-zone, signed, trust anchor) and the internal corp.example. (forward-zone, unsigned) are two fake servers. Compare dnssec-domain-insecure-lets-internal-unsigned-zone-answer"
+    ja: "分類 documented: man の記述どおり。公開側の親 example.（stub-zone、署名あり、信頼アンカー）と、内部の corp.example.（forward-zone、署名なし）は別々の偽のサーバー。dnssec-domain-insecure-lets-internal-unsigned-zone-answer と比べる"

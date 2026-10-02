@@ -3,7 +3,7 @@ title:
   en: "With ede: yes and val-log-level: 2, the SERVFAIL for a bogus answer carries EDE 6 (DNSSEC Bogus) with the log line as its text"
   ja: "ede: yes と val-log-level: 2 では、bogus の答えへの SERVFAIL に EDE 6（DNSSEC Bogus）が付き、説明文はログの行と同じ文字列になる"
 chapter: "8.5"
-category: undecided
+category: documented
 versions:
 - "1.26.0"
 source:
@@ -50,5 +50,5 @@ expect:
   ede_code: 6
   ede_text_contains: "validation failure <bad.signed.example. A IN>: signature crypto failed from 127.0.0.1"
   note:
-    en: "Category undecided: the result matches the manual. The query carries EDNS; an EDE cannot be returned without it"
-    ja: "分類 undecided: man の記述どおり。問い合わせには EDNS を付けている。EDNS がなければ EDE は返せない"
+    en: "Category documented: the result matches the manual. The query carries EDNS; an EDE cannot be returned without it"
+    ja: "分類 documented: man の記述どおり。問い合わせには EDNS を付けている。EDNS がなければ EDE は返せない"
