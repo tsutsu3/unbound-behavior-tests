@@ -201,35 +201,6 @@ def cell(text: str) -> str:
     return text.replace("|", "\\|").replace("\n", " ").strip()
 
 
-def link_source(text: str) -> str:
-    """Link each source file once and put function names in backquotes."""
-    seen: set[str] = set()
-
-    def path(m: re.Match) -> str:
-        p = m.group(1)
-        if p in seen:
-            return code(p)
-        seen.add(p)
-        return f"[{code(p)}]({SOURCE_URL}/{p})"
-
-    return FUNC_RE.sub(lambda m: code(m.group(1)), PATH_RE.sub(path, text))
-
-
-def manual_text(text: str) -> str:
-    """`none (...)` in a case means the man page says nothing."""
-    m = re.match(r"none\s*[（(](.*)[）)]\s*$", text, re.DOTALL)
-    if m:
-        return f"記述なし（{m.group(1).strip()}）"
-    if text.strip() == "none":
-        return "記述なし"
-    return text
-
-
-def sentence(text: str) -> str:
-    text = text.strip()
-    return text if text.endswith(("。", "）", ")", ".")) else text + "。"
-
-
 def display_config(config: str) -> str:
     """The case config as a reader would write it.
 
@@ -373,14 +344,32 @@ def item(case: Case, page: BookPage | None, level: int = 3) -> str:
     return "\n".join(out)
 
 
+def source_entry(text: str) -> str:
+    """The entry point of the implementation: the first file and function.
+
+    The book's footnotes only say where the evidence is.  How the code gets
+    from there to the result stays in the case (`source`, `manual`, `note`).
+    """
+    path = PATH_RE.search(text)
+    if path is None:
+        return ""
+    # A function named after the next file belongs to that file, not this one.
+    following = PATH_RE.search(text, path.end())
+    func = FUNC_RE.search(
+        text, path.end(), following.start() if following else len(text)
+    )
+    entry = f"[{code(path.group(1))}]({SOURCE_URL}/{path.group(1)})"
+    if func is not None:
+        entry += f" の {code(func.group(1))}"
+    return entry
+
+
 def footnote(case: Case) -> str:
-    parts = [f"ケース {code(case.id)}。Unbound {VERSION} で実行。"]
-    note = case.expect.get("note")
-    if note:
-        parts.append(sentence(md(note["ja"])))
-    parts.append(f"実装: {sentence(link_source(md(case.source['ja'])))}")
-    parts.append(f"man: {sentence(link_source(md(manual_text(case.manual['ja']))))}")
-    return f"[^{case.id}]: " + "".join(parts)
+    parts = [f"ケース {code(case.id)}。Unbound {VERSION} で実行"]
+    entry = source_entry(case.source["ja"])
+    if entry:
+        parts.append(f"実装は {entry}")
+    return f"[^{case.id}]: " + "。".join(parts)
 
 
 CONFIG_NOTE = (
@@ -502,10 +491,7 @@ def paid_chapter_page(key: str, items: list[tuple[Case, BookPage | None]]) -> st
         scope = f"第{number}章が扱う範囲の挙動を、本文のページごとに並べています。"
     out = [
         frontmatter(title, description, paid=True, hidden=True),
-        (
-            f"{scope}\n\n{CONFIG_NOTE}"
-            f"分類 C と B の挙動は、{free_links()}にあります。\n"
-        ),
+        (f"{scope}\n\n{CONFIG_NOTE}分類 C と B の挙動は、{free_links()}にあります。\n"),
     ]
     if key == "other":
         out.extend(item(c, p, level=2) for c, p in items)
