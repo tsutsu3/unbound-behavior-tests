@@ -29,4 +29,4 @@ expect:
   query: "1.1.168.192.in-addr.arpa. PTR"
   note:
     en: "The fix for forward-zone-private-reverse-shadowed-by-builtin. Whether domain-insecure or insecure-lan-zones is also needed once a trust anchor is set is not observed here"
-    ja: "forward-zone-private-reverse-shadowed-by-builtin の対処。信頼アンカーを設定したときに domain-insecure や insecure-lan-zones も要るかはここでは見ていない"
+    ja: "forward-zone-private-reverse-shadowed-by-builtin への対処。信頼アンカーを設定した場合に domain-insecure や insecure-lan-zones も必要かどうかは、このケースでは検証していない"

@@ -1,7 +1,7 @@
 id: forward-addr-port-trailing-garbage-ignored
 title:
   en: "Trailing characters after the forward-addr @port number are silently ignored"
-  ja: forward-addr の @ポートの数字の後ろに続く文字は黙って無視される
+  ja: forward-addr の @ポートで、数値の後ろに続く文字は警告なく無視される
 chapter: "6.4"
 category: A
 versions: ["1.26.0"]

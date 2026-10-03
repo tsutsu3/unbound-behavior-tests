@@ -1,7 +1,7 @@
 id: forward-zone-beats-stub-zone-same-name
 title:
   en: "A forward-zone and a stub-zone with the same name: the forward-zone silently wins, wherever it is written"
-  ja: 同名の forward-zone と stub-zone では、書いた位置に関係なく forward-zone が黙って勝つ
+  ja: 同名の forward-zone と stub-zone では、記述位置にかかわらず forward-zone が警告なく優先される
 chapter: "6.5"
 category: A
 versions: ["1.26.0"]

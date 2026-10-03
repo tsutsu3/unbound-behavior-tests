@@ -26,4 +26,4 @@ expect:
   rcode: "NXDOMAIN"
   note:
     en: "The usual home setup of sending reverse lookups for the LAN to the router does not work as written. Add local-zone: \"168.192.in-addr.arpa.\" nodefault (see local-zone-nodefault-removes-builtin-zone) or unblock-lan-zones: yes. Had the query been forwarded, the unanswered upstream would have made it SERVFAIL, not NXDOMAIN"
-    ja: "LAN の逆引きをルーターへ転送する家庭向けの定番設定は、そのままでは効かない。local-zone: \"168.192.in-addr.arpa.\" nodefault（local-zone-nodefault-removes-builtin-zone 参照）か unblock-lan-zones: yes が要る。転送されていれば、応答しない上流のせいで NXDOMAIN ではなく SERVFAIL になる"
+    ja: "LAN の逆引きをルーターへ転送する一般的な家庭向け設定は、そのままでは機能しない。local-zone: \"168.192.in-addr.arpa.\" nodefault（local-zone-nodefault-removes-builtin-zone 参照）または unblock-lan-zones: yes が必要。転送されていれば、応答しない上流の影響で NXDOMAIN ではなく SERVFAIL になる"

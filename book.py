@@ -48,9 +48,9 @@ SOURCE_URL = f"https://github.com/NLnetLabs/unbound/blob/{TAG}"
 #: about the man page, so they go into a footnote: the book does not make the
 #: man page the subject of body text.
 CATEGORIES = {
-    "C": "man に記述はあるが結果が直感に反する",
-    "B": "man の記述と実装が食い違う / 曖昧",
-    "A": "man に記述がない挙動",
+    "C": "man に記述はあるが、結果が直感に反する",
+    "B": "man の記述と実装が食い違う、または記述が曖昧",
+    "A": "man に記述がない",
 }
 #: What headings and tables call each category.
 LABELS = {
@@ -71,8 +71,8 @@ PAID_PREFIX = "undocumented-a-"
 FREE_PAGE = {cat: f"/ja/appendix/undocumented-{cat.lower()}/" for cat in FREE}
 #: What each free page says about its own category.
 FREE_INTRO = {
-    "C": "公式の説明に書いてあるとおりなのに、結果が直感に反するもの",
-    "B": "公式の説明と実際の動作が食い違うもの、または説明があいまいなもの",
+    "C": "公式ドキュメントの説明どおりに動作するものの、結果が直感に反する挙動",
+    "B": "公式ドキュメントの説明と実際の動作が食い違う挙動、または説明が曖昧な挙動",
 }
 PAID_INDEX = "/ja/appendix/undocumented-a-index/"
 
@@ -385,7 +385,7 @@ def footnote(case: Case) -> str:
 
 CONFIG_NOTE = (
     f"どの項目も Unbound {VERSION} で確かめた結果です。設定には、"
-    "待ち受けのアドレスやアクセス制御など、実行に要る定型の行を省いています。"
+    "待ち受けアドレスやアクセス制御など、実行に必要な定型の行を省いています。"
 )
 
 
@@ -461,7 +461,7 @@ def free_page(
         ),
         (
             f"Unbound {VERSION} で確かめた挙動のうち、{FREE_INTRO[cat]}を並べています[^categories]。"
-            "下の表から、項目ごとの設定、結果、根拠へ飛べます。\n"
+            "下の表から、各項目の設定、結果、根拠を参照できます。\n"
         ),
         "| 分類 | 内容 | 件数 |\n| --- | --- | --- |",
     ]
@@ -532,7 +532,7 @@ def paid_index_page(rows: list[tuple[Case, str, str]]) -> str:
         (
             f"Unbound {VERSION} で確かめた挙動のうち、公式の説明に書かれていないもの"
             f"（分類 A、{len(rows)} 件）を一覧にしています[^categories]。"
-            "挙動の欄のリンク先に、各項目の設定、結果、根拠があります。"
+            "挙動欄のリンク先に、各項目の設定、結果、根拠を示しています。"
             f"分類 C と B は、{free_links()}にあります。\n"
         ),
         "| 挙動 | 本文 |\n| --- | --- |",

@@ -32,4 +32,4 @@ expect:
   query: "example.com. A"
   note:
     en: "www.example.net. has local-data in the same server, but the query for it goes to the upstream. The man page says so, but pointing a redirect at your own local-data looks like it should work"
-    ja: "www.example.net. は同じサーバーに local-data があるのに、その問い合わせは上流へ出る。man に書いてあるとおりだが、自分の local-data を redirect の行き先にできそうに見える"
+    ja: "www.example.net. の local-data が同じサーバーにあっても、問い合わせは上流へ送られる。動作は man の説明どおりだが、redirect の転送先に自分の local-data を指定できるようにも読める"

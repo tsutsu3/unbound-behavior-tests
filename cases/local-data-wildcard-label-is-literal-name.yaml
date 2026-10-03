@@ -26,4 +26,4 @@ expect:
   answer_count: 0
   note:
     en: "The man page says to use a stub-zone if you need wildcards, but writing one anyway is not an error. It silently becomes a setting that does nothing. To point a whole subtree at one answer, use the redirect type"
-    ja: "man はワイルドカードが要るなら stub-zone を使えと書くが、書いてしまってもエラーにはならない。無言で「効かない設定」になる。サブドメイン全体を 1 つの答えに向けたいなら redirect 型を使う"
+    ja: "man は、ワイルドカードが必要なら stub-zone を使うよう説明している。ただし local-data にワイルドカードを書いてもエラーにはならず、警告なしに機能しない設定となる。サブドメイン全体を1つの答えに向けるには redirect 型を使う"

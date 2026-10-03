@@ -29,4 +29,4 @@ expect:
   query: "example.com. A"
   note:
     en: "This case is not run. By design the fake upstream in runner/upstream.py never answers, so it cannot tell whether an answer was cached. Deciding it needs an upstream that answers and a way to send the same query twice and count whether the second one arrives too. That needs a design decision, so the case stays open"
-    ja: "このケースは実行しない。runner/upstream.py の偽上流は 方針として応答を返さないため、応答がキャッシュされたか否かを区別できない。判定には「応答を返す偽上流」と「同じ問い合わせを 2 回送って 2 回目も届くか数える」仕組みが要る。設計判断が要るので未確定のまま残す"
+    ja: "このケースは実行しない。runner/upstream.py の偽上流は方針として応答を返さないため、応答がキャッシュされたかどうかを区別できない。判定には「応答を返す偽上流」と「同じ問い合わせを2回送り、2回目も届くかを数える」仕組みが必要。設計上の判断が必要なため、未確定のまま残す"

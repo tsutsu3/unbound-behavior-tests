@@ -10,7 +10,7 @@ source:
   ja: "daemon/daemon.c daemon_create_workers(): USE_DNSTAP がないとき cfg->dnstap なら fatal_exit(\"dnstap enabled in config but not built with dnstap support\") を呼ぶ。設定のパーサーはどのビルドでも dnstap: 節を受け付け、smallapp/unbound-checkconf.c にはこの検査がない"
 manual:
   en: "none (the DNSTAP Options section says dnstap has to be compiled in with --enable-dnstap, but not what happens otherwise)"
-  ja: "none（DNSTAP Options の節は --enable-dnstap でのビルドが要ると書くが、そうでないときに何が起きるかは書いていない）"
+  ja: "none（DNSTAP Options の節には --enable-dnstap を指定したビルドが必要とあるが、指定しなかった場合の動作は書かれていない）"
 layers:
   en: ["config parse", "daemon start-up"]
   ja: ["設定の読み込み", "デーモンの起動"]

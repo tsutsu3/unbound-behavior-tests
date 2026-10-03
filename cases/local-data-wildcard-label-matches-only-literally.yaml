@@ -27,4 +27,4 @@ expect:
   answer_contains: ["192.0.2.1"]
   note:
     en: "The setting is not silently ignored: a record named * really exists. That is also why checkconf passes"
-    ja: "設定が黙って無視されているのではなく、* という名前のレコードとして実在している。だから checkconf も通る"
+    ja: "設定自体が無視されるのではなく、* という名前のレコードとして登録される。このため checkconf も成功する"

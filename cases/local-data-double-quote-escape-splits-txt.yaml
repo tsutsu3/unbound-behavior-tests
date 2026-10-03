@@ -27,4 +27,4 @@ expect:
   answer_contains: ['"\"hello" "world\""']
   note:
     en: "It is not an error. Different data, two character-strings with quotes in them, is registered silently"
-    ja: "エラーにならず、引用符付きの 2 つの character-string という別のデータが黙って登録される"
+    ja: "エラーにはならず、引用符を含む 2 つの character-string という意図しないデータが警告なく登録される"
