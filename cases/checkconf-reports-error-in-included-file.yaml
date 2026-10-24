@@ -1,0 +1,30 @@
+id: checkconf-reports-error-in-included-file
+title:
+  en: "unbound-checkconf also checks a file read with include: and reports the error with that file's name"
+  ja: "unbound-checkconf は include: で読み込んだファイルも検査し、誤りをそのファイル名で報告する"
+chapter: "3.4"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "util/configlexer.lex handles include: with config_start_include_glob(), which pushes the included file onto the lexer input, so the parser reads it as part of the same configuration. The error is printed by util/config_file.c ub_c_error() with the current file name and line"
+  ja: "util/configlexer.lex が include: を config_start_include_glob() で処理し、インクルード先のファイルを字句解析の入力に積むので、構文解析は同じ設定ファイルの一部として読む。誤りは util/config_file.c ub_c_error() が、その時点のファイル名と行番号を付けて出す"
+manual:
+  en: "doc/unbound.conf.5.in Including Files: Processing continues as if the text from the included file was copied into the config file at that point. (unbound-checkconf.8.in does not mention included files)"
+  ja: "doc/unbound.conf.5.in Including Files: Processing continues as if the text from the included file was copied into the config file at that point.（unbound-checkconf.8.in は include したファイルに触れていない）"
+layers:
+  en: ["include expansion", "checkconf result report"]
+  ja: ["インクルード展開", "checkconf の結果表示"]
+status: verified
+config: |
+  include: "extra.conf"
+files:
+  extra.conf: |
+    server:
+        no-such-option: yes
+command: unbound-checkconf
+expect:
+  exit: 1
+  stderr_contains: "extra.conf:2: error: unknown keyword 'no-such-option'"
+  note:
+    en: "The error names the included file and its line, not the main config file"
+    ja: "エラーは本体の設定ファイルではなく、インクルード先のファイル名と行番号で出る"
