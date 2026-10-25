@@ -1,0 +1,60 @@
+id: serve-expired-zero-timeout-skips-refetch-after-failure
+title:
+  en: 'With serve-expired-client-timeout: 0, the expired answer comes back at once, and after a failed refetch no refetch is started for 5 seconds'
+  ja: 'serve-expired-client-timeout: 0 では期限切れの答えがすぐ返り、取り直しに失敗した後の5秒間は取り直しを始めない'
+chapter: '4.4'
+category: A
+versions:
+- 1.26.0
+source:
+  en: iterator/iterator.c error_response_cache() keeps the expired answer and sets serve_expired_norec_ttl to now + NORR_TTL (5 seconds); daemon/worker.c answer_from_cache() serves the expired answer without a refetch while now < serve_expired_norec_ttl, unless prefetch starts one through reply_and_prefetch()
+  ja: iterator/iterator.c error_response_cache() は期限切れの答えを残し、serve_expired_norec_ttl を now + NORR_TTL（5秒）にする。daemon/worker.c answer_from_cache() は now < serve_expired_norec_ttl の間、取り直さずに期限切れの答えを返す。prefetch が有効なら reply_and_prefetch() が取り直しを始める
+manual:
+  en: 'doc/unbound.conf.rst serve-expired-client-timeout: Setting this to 0 will disable this behavior and instead serve the expired record immediately from the cache before attempting to refresh it via resolution.'
+  ja: 'doc/unbound.conf.rst serve-expired-client-timeout: Setting this to 0 will disable this behavior and instead serve the expired record immediately from the cache before attempting to refresh it via resolution.'
+layers:
+  en:
+  - message cache
+  - serve-expired
+  ja:
+  - message cache
+  - serve-expired
+status: verified
+config: |
+  serve-expired: yes
+  serve-expired-client-timeout: 0
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5926
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5926
+    replies:
+    - qname: www.example.
+      qtype: A
+      aa: true
+      answer:
+      - www.example. 2 IN A 192.0.2.1
+      limit: 1
+    - qname: www.example.
+      qtype: A
+      rcode: SERVFAIL
+  steps:
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - sleep: 3
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new: 0
+  note:
+    en: 'Category A: the 5 seconds are not in the manual. The second query gets the expired answer and starts a refetch that fails'
+    ja: '分類 A: 5秒は man にない。2回目は期限切れの答えを受け取り、失敗する取り直しを始める'

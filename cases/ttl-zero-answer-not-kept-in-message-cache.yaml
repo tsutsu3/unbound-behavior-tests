@@ -1,0 +1,47 @@
+id: ttl-zero-answer-not-kept-in-message-cache
+title:
+  en: 'An answer with TTL 0 is not kept in the message cache: the same question goes upstream again'
+  ja: TTL 0 の答えは message cache に残らず、同じ問いでも再び上流へ問い合わせる
+chapter: '4.2'
+category: A
+versions:
+- 1.26.0
+source:
+  en: 'services/cache/dns.c dns_cache_store(): a reply whose TTL is 0 has its RRsets stored but is not put in the message cache'
+  ja: 'services/cache/dns.c dns_cache_store(): TTL が0の応答は RRset を保存するが message cache には入れない'
+manual:
+  en: none
+  ja: none
+layers:
+  en:
+  - message cache
+  ja:
+  - message cache
+status: verified
+config: |
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5931
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5931
+    replies:
+    - qname: www.example.
+      qtype: A
+      aa: true
+      answer:
+      - www.example. 0 IN A 192.0.2.1
+  steps:
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  note:
+    en: 'Category A: the manual does not say what happens to TTL 0'
+    ja: '分類 A: TTL 0 の扱いは man にない'

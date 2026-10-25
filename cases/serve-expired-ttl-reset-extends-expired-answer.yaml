@@ -1,0 +1,61 @@
+id: serve-expired-ttl-reset-extends-expired-answer
+title:
+  en: 'With serve-expired-ttl-reset: yes, a failed refetch restarts the time an expired answer may be served'
+  ja: 'serve-expired-ttl-reset: yes では、取り直しに失敗すると、期限切れの答えを使える期間がその時点から数え直される'
+chapter: '4.4'
+category: documented
+versions:
+- 1.26.0
+source:
+  en: 'iterator/iterator.c error_response_cache(): with serve_expired_ttl_reset, a failed refetch sets the expired answer''s serve_expired_ttl to now + serve-expired-ttl'
+  ja: 'iterator/iterator.c error_response_cache(): serve_expired_ttl_reset が有効なら、取り直しの失敗で期限切れの答えの serve_expired_ttl を now + serve-expired-ttl にする'
+manual:
+  en: 'doc/unbound.conf.rst serve-expired-ttl-reset: Set the TTL of expired records to the serve-expired-ttl value after a failed attempt to retrieve the record from upstream. This makes sure that the expired records will be served as long as there are queries for it.'
+  ja: 'doc/unbound.conf.rst serve-expired-ttl-reset: Set the TTL of expired records to the serve-expired-ttl value after a failed attempt to retrieve the record from upstream. This makes sure that the expired records will be served as long as there are queries for it.'
+layers:
+  en:
+  - message cache
+  - serve-expired
+  ja:
+  - message cache
+  - serve-expired
+status: verified
+config: |
+  serve-expired: yes
+  serve-expired-ttl: 6
+  serve-expired-client-timeout: 0
+  serve-expired-ttl-reset: yes
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5927
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5927
+    replies:
+    - qname: www.example.
+      qtype: A
+      aa: true
+      answer:
+      - www.example. 1 IN A 192.0.2.1
+      limit: 1
+    - qname: www.example.
+      qtype: A
+      rcode: SERVFAIL
+  steps:
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - sleep: 4
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+  - sleep: 3
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+  note:
+    en: 'Category documented: matches the manual. TTL 1 and serve-expired-ttl 6: the answer may be served until about 7 seconds after it was stored. The refetch at about 5.5 seconds fails and moves that to about 11.5, so the query at about 10 seconds still gets it. Compare serve-expired-ttl-without-reset-stops-serving'
+    ja: '分類 documented: man の記述どおり。TTL 1、serve-expired-ttl 6 なので、保存から約7秒まで使える。約5.5秒の取り直しが失敗して期限が約11.5秒に延び、約10秒の問い合わせにも返る。serve-expired-ttl-without-reset-stops-serving と比べる'

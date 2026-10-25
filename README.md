@@ -190,6 +190,7 @@ either (it would clash with the file generated from `config:`).
 | `run-and-observe`   | Starts the daemon and checks what reaches a fake upstream | `checkconf_exit`, `listen{proto,addr}`, `query`, `note`                                                   |
 | `run-and-dig`       | Starts the daemon and checks the content of the answer | `checkconf_exit`, `starts`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `query_flags`, `flags_contains`, `flags_not_contains`, `ede_code`, `ede_text_contains`, `no_reply`, `client`, `note` |
 | `run-with-upstreams` | Starts fake upstreams that record each query (name, type, RD bit, first TCP bytes) and answer by rule, then starts the daemon and queries it | `checkconf_exit`, `upstreams`, `query`, `rcode`, `answer_contains`, `answer_count`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `query_flags`, `flags_contains`, `flags_not_contains`, `ede_code`, `ede_text_contains`, `no_reply`, `client`, `note` |
+| `run-sequence`      | Starts fake upstreams (optional) and the daemon, then runs `steps` in order against the same daemon: queries, pauses and `unbound-control` commands | `checkconf_exit`, `upstreams`, `steps`, `stderr_contains`, `stderr_not_contains`, `note` |
 | `run-and-resolve`   | Starts the daemon on port 53, points `/etc/resolv.conf` at it and runs `getent ahosts` | `checkconf_exit`, `lookup`, `lookup_exit`, `lookup_contains`, `lookup_empty`, `control_lookup`, `control_contains`, `note` |
 
 `stderr_contains` / `stderr_not_contains` in `unbound-checkconf` search stdout
@@ -248,11 +249,25 @@ sent and what is read off the reply besides its sections:
 
 | Key | Meaning |
 | --- | --- |
-| `query_flags` | Flags set on the query: `do` (EDNS DO bit), `cd`, `ad`. Left out, the query has no EDNS and only RD. `[]` means the same query, stated explicitly (for `dig` it turns off the AD bit `dig` sets by default) |
+| `query_flags` | Flags set on the query: `do` (EDNS DO bit), `cd`, `ad`, and `nord`, which clears the RD bit. Left out, the query has no EDNS and only RD. `[]` means the same query, stated explicitly (for `dig` it turns off the AD bit `dig` sets by default) |
 | `flags_contains` / `flags_not_contains` | Header flags of the reply, as `dig` prints them (`ad`, `cd`, ...) |
 | `ede_code` / `ede_text_contains` | The Extended DNS Error option of the reply. The query is sent with EDNS when either is given |
 | `no_reply: true` | Nothing must come back (`access-control: ... deny`). Cannot be combined with the answer checks |
 | `client` | Where the query comes from. Left out: 127.0.0.1 to 127.0.0.1, and the boilerplate has `access-control: 127.0.0.0/8 allow` and `::1 allow`. `non-loopback` or `loopback6`: the boilerplate has **no** `access-control` line and listens on `0.0.0.0` and `::1`, and the query is sent to the container's own non-loopback IPv4 address or to `::1`, so the case sees Unbound's built-in defaults |
+
+`run-sequence` is for behaviour that only shows over time: the second answer
+to the same question, what reaches the upstream after the first one, or a
+statistic. `steps` is a list; each step is exactly one of
+
+| Step | Meaning |
+| --- | --- |
+| `query` | Send a query. Takes the client keys above except `client`, the answer checks of `run-and-dig`, `answer_ttl_max` / `authority_ttl` / `authority_ttl_max` (a TTL counted down in the cache), and `upstream_new` / `upstream_new_min`: how many queries reached the upstreams, all together, during this step. The runner waits 1.5 seconds after each reply before counting |
+| `sleep` | Wait this many seconds |
+| `control` | Run `unbound-control <command>`; `control_contains` lists substrings of its output. The case config opens `remote-control:` itself (`control-use-cert: no`) |
+
+A reply rule of a fake upstream may carry `limit: N`: it answers only its
+first N matching queries, and later ones fall through to the next rule. A
+case uses it to make the upstream answer once and fail afterwards.
 
 DNSSEC cases do not sign anything at run time. The RRSIG / DNSKEY / DS / NSEC
 records are written out in the case, pre-signed by test keys with

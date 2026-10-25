@@ -1,0 +1,59 @@
+id: serve-expired-ttl-without-reset-stops-serving
+title:
+  en: Without serve-expired-ttl-reset, an expired answer is not served past serve-expired-ttl even while refetches fail
+  ja: serve-expired-ttl-reset がなければ、取り直しが失敗し続けても、serve-expired-ttl を過ぎた期限切れの答えは返らない
+chapter: '4.4'
+category: documented
+versions:
+- 1.26.0
+source:
+  en: 'iterator/iterator.c error_response_cache(): with serve_expired_ttl_reset, a failed refetch sets the expired answer''s serve_expired_ttl to now + serve-expired-ttl'
+  ja: 'iterator/iterator.c error_response_cache(): serve_expired_ttl_reset が有効なら、取り直しの失敗で期限切れの答えの serve_expired_ttl を now + serve-expired-ttl にする'
+manual:
+  en: 'doc/unbound.conf.rst serve-expired-ttl-reset: Set the TTL of expired records to the serve-expired-ttl value after a failed attempt to retrieve the record from upstream. This makes sure that the expired records will be served as long as there are queries for it.'
+  ja: 'doc/unbound.conf.rst serve-expired-ttl-reset: Set the TTL of expired records to the serve-expired-ttl value after a failed attempt to retrieve the record from upstream. This makes sure that the expired records will be served as long as there are queries for it.'
+layers:
+  en:
+  - message cache
+  - serve-expired
+  ja:
+  - message cache
+  - serve-expired
+status: verified
+config: |
+  serve-expired: yes
+  serve-expired-ttl: 6
+  serve-expired-client-timeout: 0
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5928
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5928
+    replies:
+    - qname: www.example.
+      qtype: A
+      aa: true
+      answer:
+      - www.example. 1 IN A 192.0.2.1
+      limit: 1
+    - qname: www.example.
+      qtype: A
+      rcode: SERVFAIL
+  steps:
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - sleep: 4
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+  - sleep: 3
+  - query: www.example. A
+    rcode: SERVFAIL
+  note:
+    en: 'Category documented. The same steps as serve-expired-ttl-reset-extends-expired-answer without the reset: the query at about 10 seconds is past the 7 seconds, and the failure is answered SERVFAIL'
+    ja: 分類 documented。serve-expired-ttl-reset-extends-expired-answer から reset だけを外した。約10秒の問い合わせは7秒を過ぎていて、失敗が SERVFAIL で返る

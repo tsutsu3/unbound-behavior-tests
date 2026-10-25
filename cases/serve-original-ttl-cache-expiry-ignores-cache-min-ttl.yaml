@@ -1,0 +1,52 @@
+id: serve-original-ttl-cache-expiry-ignores-cache-min-ttl
+title:
+  en: With serve-original-ttl, the cache entry expires at the upstream TTL even when cache-min-ttl is larger
+  ja: serve-original-ttl を有効にすると、cache-min-ttl が大きくても、キャッシュの項目は上流の TTL で切れる
+chapter: '4.3'
+category: B
+versions:
+- 1.26.0
+source:
+  en: util/data/msgreply.c rdata_copy() applies cache-min-ttl and cache-max-ttl only if !SERVE_ORIGINAL_TTL, and the TTL it computes is the one the cache entry expires at
+  ja: util/data/msgreply.c rdata_copy() は !SERVE_ORIGINAL_TTL のときだけ cache-min-ttl と cache-max-ttl を当て、その TTL でキャッシュの項目が切れる
+manual:
+  en: 'doc/unbound.conf.rst serve-original-ttl: Enabling this feature does not impact cache expiry, it only changes the TTL Unbound embeds in responses to queries. Enabling this feature implicitly disables enforcement of the configured minimum and maximum TTL'
+  ja: 'doc/unbound.conf.rst serve-original-ttl: Enabling this feature does not impact cache expiry, it only changes the TTL Unbound embeds in responses to queries. Enabling this feature implicitly disables enforcement of the configured minimum and maximum TTL'
+layers:
+  en:
+  - cache TTL clamping
+  - message cache
+  ja:
+  - キャッシュの TTL の丸め
+  - message cache
+status: verified
+config: |
+  serve-original-ttl: yes
+  cache-min-ttl: 30
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5934
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5934
+    replies:
+    - qname: www.example.
+      qtype: A
+      aa: true
+      answer:
+      - www.example. 2 IN A 192.0.2.1
+  steps:
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - sleep: 3
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  note:
+    en: 'Category B: the manual says the option does not impact cache expiry, yet with cache-min-ttl: 30 the entry expires after the upstream''s 2 seconds instead of 30. Without serve-original-ttl the second query would be a cache hit (cache-min-ttl-raises-upstream-ttl)'
+    ja: '分類 B: man は「cache expiry に影響しない」と書くが、cache-min-ttl: 30 でも項目は30秒ではなく上流の2秒で切れる。serve-original-ttl がなければ2回目はキャッシュヒットになる（cache-min-ttl-raises-upstream-ttl）'

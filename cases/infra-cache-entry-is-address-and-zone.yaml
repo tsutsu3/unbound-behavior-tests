@@ -1,0 +1,62 @@
+id: infra-cache-entry-is-address-and-zone
+title:
+  en: The infra cache keeps one entry per pair of server address and zone name, not one per host
+  ja: infra cache の項目はホストごとではなく、サーバーのアドレスとゾーン名の組ごとにできる
+chapter: '4.2'
+category: B
+versions:
+- 1.26.0
+source:
+  en: services/cache/infra.h struct infra_key holds the address and the zone name; infra_create() sizes the table as infra-cache-numhosts times the entry size
+  ja: services/cache/infra.h struct infra_key はアドレスとゾーン名を持つ。infra_create() は infra-cache-numhosts に1件の大きさを掛けて表の大きさを決める
+manual:
+  en: 'doc/unbound.conf.rst infra-cache-numhosts: Number of hosts for which information is cached.'
+  ja: 'doc/unbound.conf.rst infra-cache-numhosts: Number of hosts for which information is cached.'
+layers:
+  en:
+  - infra cache
+  ja:
+  - infra cache
+status: verified
+config: |
+  stub-zone:
+    name: "a.example."
+    stub-addr: 127.0.0.1@5933
+  stub-zone:
+    name: "b.example."
+    stub-addr: 127.0.0.1@5933
+  remote-control:
+    control-enable: yes
+    control-interface: 127.0.0.1
+    control-port: 18953
+    control-use-cert: no
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5933
+    replies:
+    - qname: www.a.example.
+      qtype: A
+      aa: true
+      answer:
+      - www.a.example. 300 IN A 192.0.2.1
+    - qname: www.b.example.
+      qtype: A
+      aa: true
+      answer:
+      - www.b.example. 300 IN A 192.0.2.2
+  steps:
+  - query: www.a.example. A
+    answer_contains:
+    - 192.0.2.1
+  - query: www.b.example. A
+    answer_contains:
+    - 192.0.2.2
+  - control: dump_infra
+    control_contains:
+    - 127.0.0.1@5933 a.example.
+    - 127.0.0.1@5933 b.example.
+  note:
+    en: 'Category B: the manual counts hosts. One server address serving two zones makes two entries'
+    ja: '分類 B: man は「ホスト」の数と書く。2つのゾーンに答える1つのアドレスで、項目が2つできる'

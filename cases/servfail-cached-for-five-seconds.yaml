@@ -1,0 +1,45 @@
+id: servfail-cached-for-five-seconds
+title:
+  en: After a resolution failure, the same question is answered SERVFAIL from the cache for 5 seconds without querying upstream
+  ja: 解決失敗の後、同じ問いには5秒間、上流へ問い合わせずにキャッシュの SERVFAIL で答える
+chapter: '4.3'
+category: A
+versions:
+- 1.26.0
+source:
+  en: iterator/iterator.c error_response_cache() stores a SERVFAIL reply with TTL NORR_TTL (util/data/msgparse.h, 5 seconds); daemon/worker.c answer_from_cache() answers from it
+  ja: iterator/iterator.c error_response_cache() は SERVFAIL を TTL NORR_TTL（util/data/msgparse.h、5秒）で保存する。daemon/worker.c answer_from_cache() がそこから答える
+manual:
+  en: none
+  ja: none
+layers:
+  en:
+  - iterator failure cache
+  ja:
+  - iterator の失敗のキャッシュ
+status: verified
+config: |
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5921
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5921
+    replies:
+    - rcode: SERVFAIL
+  steps:
+  - query: www.example. A
+    rcode: SERVFAIL
+    upstream_new_min: 1
+  - query: www.example. A
+    rcode: SERVFAIL
+    upstream_new: 0
+  - sleep: 5
+  - query: www.example. A
+    rcode: SERVFAIL
+    upstream_new_min: 1
+  note:
+    en: 'Category A: the 5 seconds are not in the manual. The fake authority answers SERVFAIL to everything. The second query comes within the 5 seconds and nothing reaches the upstream; after they have passed, the upstream is asked again'
+    ja: '分類 A: 5秒は man にない。偽の権威 DNS サーバーはすべてに SERVFAIL を返す。5秒以内の2回目は上流に何も届かず、5秒が過ぎると再び上流へ問い合わせる'

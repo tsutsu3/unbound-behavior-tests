@@ -225,39 +225,61 @@ def _check_stderr(case: Case, report: Report, stderr: str) -> None:
 
 def _check_answer(case: Case, report: Report, answer) -> None:
     """The client side checks shared by run-and-dig and run-with-upstreams."""
+    _check_reply(case.expect, report, answer)
+
+
+def _check_reply(e: dict, report: Report, answer, where: str = "") -> None:
+    """Compare one reply with an expect mapping (a case's, or a step's)."""
     import dns.edns
     import dns.flags
     import dns.rcode
 
-    report.note(f"reply: {answer.rcode()!r} answer section: {answer.answer!r}")
-    if "rcode" in case.expect:
-        report.check("rcode", case.expect["rcode"], dns.rcode.to_text(answer.rcode()))
+    report.note(f"{where}reply: {answer.rcode()!r} answer section: {answer.answer!r}")
+    if "rcode" in e:
+        report.check(f"{where}rcode", e["rcode"], dns.rcode.to_text(answer.rcode()))
     rendered = "\n".join(rr.to_text() for rr in answer.answer)
-    for needle in case.expect.get("answer_contains", []):
-        report.check_contains("answer section", needle, rendered)
-    if "answer_count" in case.expect:
+    for needle in e.get("answer_contains", []):
+        report.check_contains(f"{where}answer section", needle, rendered)
+    if "answer_count" in e:
         count = sum(len(rrset) for rrset in answer.answer)
-        report.check("records in answer section", case.expect["answer_count"], count)
-    if "answer_ttl" in case.expect:
-        ttls = sorted({rrset.ttl for rrset in answer.answer})
-        report.check("answer TTL(s)", [case.expect["answer_ttl"]], ttls)
+        report.check(f"{where}records in answer section", e["answer_count"], count)
+    ttls = sorted({rrset.ttl for rrset in answer.answer})
+    if "answer_ttl" in e:
+        report.check(f"{where}answer TTL(s)", [e["answer_ttl"]], ttls)
+    if "answer_ttl_max" in e:
+        report.check(
+            f"{where}answer TTL(s) at most {e['answer_ttl_max']}",
+            True,
+            bool(ttls) and max(ttls) <= e["answer_ttl_max"],
+        )
+        report.note(f"{where}answer TTL(s): {ttls}")
     authority = "\n".join(rr.to_text() for rr in answer.authority)
-    for needle in case.expect.get("authority_contains", []):
-        report.check_contains("authority section", needle, authority)
+    for needle in e.get("authority_contains", []):
+        report.check_contains(f"{where}authority section", needle, authority)
+    attls = sorted({rrset.ttl for rrset in answer.authority})
+    if "authority_ttl" in e:
+        report.check(f"{where}authority TTL(s)", [e["authority_ttl"]], attls)
+    if "authority_ttl_max" in e:
+        report.check(
+            f"{where}authority TTL(s) at most {e['authority_ttl_max']}",
+            True,
+            bool(attls) and max(attls) <= e["authority_ttl_max"],
+        )
+        report.note(f"{where}authority TTL(s): {attls}")
     flags = dns.flags.to_text(answer.flags).lower().split()
-    report.note(f"reply flags: {flags}")
-    for flag in case.expect.get("flags_contains", []):
-        report.check(f"reply has flag {flag}", True, flag in flags)
-    for flag in case.expect.get("flags_not_contains", []):
-        report.check(f"reply lacks flag {flag}", True, flag not in flags)
+    report.note(f"{where}reply flags: {flags}")
+    for flag in e.get("flags_contains", []):
+        report.check(f"{where}reply has flag {flag}", True, flag in flags)
+    for flag in e.get("flags_not_contains", []):
+        report.check(f"{where}reply lacks flag {flag}", True, flag not in flags)
     edes = [o for o in answer.options if o.otype == dns.edns.OptionType.EDE]
-    report.note(f"reply EDE: {[(int(o.code), o.text) for o in edes]}")
-    if "ede_code" in case.expect:
-        report.check("EDE code", [case.expect["ede_code"]], [int(o.code) for o in edes])
-    if "ede_text_contains" in case.expect:
+    report.note(f"{where}reply EDE: {[(int(o.code), o.text) for o in edes]}")
+    if "ede_code" in e:
+        report.check(f"{where}EDE code", [e["ede_code"]], [int(o.code) for o in edes])
+    if "ede_text_contains" in e:
         report.check_contains(
-            "EDE text",
-            case.expect["ede_text_contains"],
+            f"{where}EDE text",
+            e["ede_text_contains"],
             "\n".join(o.text or "" for o in edes),
         )
 
@@ -397,6 +419,101 @@ def _run_upstreams_case(case: Case, tmp: pathlib.Path, report: Report, opts) -> 
     _check_stderr(case, report, proc.stderr)
 
 
+#: How long a run-sequence query step waits for the reply, and then for
+#: the upstream traffic it caused to arrive before counting it.  A
+#: serve-expired refetch may hold the reply up to 1.8 seconds.
+STEP_REPLY_TIMEOUT = 6.0
+STEP_SETTLE = 1.5
+
+
+def _run_sequence_case(case: Case, tmp: pathlib.Path, report: Report, opts) -> None:
+    """Steps in order against one daemon: queries, pauses, unbound-control.
+
+    The cache, the infra cache and the statistics carry over from step to
+    step, which is the point: a case can ask the same question twice and
+    see what the second answer and the upstream make of the first.
+    """
+    import time
+
+    conf, _ = _checkconf_gate(case, tmp, report)
+    specs = case.expect.get("upstreams", [])
+    ups = []
+    for spec in specs:
+        addr, _, port = spec["addr"].rpartition(":")
+        ups.append(
+            upstream.ServingUpstream(spec["proto"], addr, int(port), spec["replies"])
+        )
+
+    def seen() -> int:
+        return sum(len(up.snapshot()) for up in ups)
+
+    with contextlib.ExitStack() as stack:
+        for up in ups:
+            stack.enter_context(up)
+        proc = stack.enter_context(unbound.UnboundProcess(conf))
+        if not proc.wait_ready():
+            report.note(f"unbound stderr:\n{proc.stderr}")
+            report.check("unbound started", True, False)
+            report.finish()
+            return
+        for i, step in enumerate(case.expect["steps"]):
+            where = f"step {i + 1}: "
+            if "sleep" in step:
+                time.sleep(step["sleep"])
+                continue
+            if "control" in step:
+                res = unbound.run_control(conf, step["control"])
+                report.note(
+                    f"{where}unbound-control {step['control']} exit={res.exit_code}"
+                )
+                report.check(f"{where}unbound-control exit code", 0, res.exit_code)
+                for needle in step.get("control_contains", []):
+                    report.check_contains(
+                        f"{where}unbound-control output",
+                        needle,
+                        res.stdout + res.stderr,
+                    )
+                continue
+            before = seen()
+            answer = unbound.send_query(
+                step["query"],
+                timeout=STEP_REPLY_TIMEOUT,
+                flags=tuple(step.get("query_flags", ())),
+                edns="ede_code" in step or "ede_text_contains" in step,
+            )
+            time.sleep(STEP_SETTLE)
+            new = seen() - before
+            report.note(
+                f"{where}{step['query']}: {new} quer(ies) reached the upstreams"
+            )
+            if "upstream_new" in step:
+                report.check(
+                    f"{where}queries that reached the upstreams",
+                    step["upstream_new"],
+                    new,
+                )
+            if "upstream_new_min" in step:
+                report.check(
+                    f"{where}at least {step['upstream_new_min']} quer(ies) reached the upstreams",
+                    True,
+                    new >= step["upstream_new_min"],
+                )
+            if step.get("no_reply"):
+                report.check(f"{where}no reply", None, answer and answer.to_text())
+            elif answer is None:
+                report.check(f"{where}got a reply", True, False)
+            else:
+                _check_reply(step, report, answer, where)
+    for spec, up in zip(specs, ups, strict=True):
+        got = [r.spec() for r in up.snapshot()]
+        report.note(f"{up.where} received: {got}")
+        for need in spec.get("received_contains", []):
+            report.check(f"{up.where} received {need!r}", True, need in got)
+        if spec.get("received_none"):
+            report.check(f"{up.where} received nothing", [], got)
+    _check_stderr(case, report, proc.stderr)
+
+
 def _run_resolve_case(case: Case, tmp: pathlib.Path, report: Report, opts) -> None:
     conf, _ = _checkconf_gate(case, tmp, report, port=unbound.STUB_PORT)
     proc = unbound.UnboundProcess(conf, port=unbound.STUB_PORT)
@@ -438,6 +555,7 @@ RUNNERS = {
     "run-and-observe": _run_observe_case,
     "run-and-dig": _run_dig_case,
     "run-and-resolve": _run_resolve_case,
+    "run-sequence": _run_sequence_case,
 }
 
 

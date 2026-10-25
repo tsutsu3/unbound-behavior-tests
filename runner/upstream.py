@@ -144,6 +144,7 @@ class ServingUpstream:
         self.tls_completed = 0
         self.tls_failed = 0
         self.received: list[Received] = []
+        self._used: dict[int, int] = {}
         self.first_bytes: list[bytes] = []
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -195,11 +196,16 @@ class ServingUpstream:
         q = query.question[0]
         qname = q.name.to_text().lower()
         qtype = dns.rdatatype.to_text(q.rdtype)
-        for rule in self.replies:
+        for i, rule in enumerate(self.replies):
             if "qname" in rule and rule["qname"].lower() != qname:
                 continue
             if "qtype" in rule and rule["qtype"] != qtype:
                 continue
+            if "limit" in rule:
+                with self._lock:
+                    if self._used.get(i, 0) >= rule["limit"]:
+                        continue
+                    self._used[i] = self._used.get(i, 0) + 1
             resp = dns.message.make_response(query)
             resp.set_rcode(dns.rcode.from_text(rule.get("rcode", "NOERROR")))
             if rule.get("aa"):

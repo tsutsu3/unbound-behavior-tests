@@ -176,6 +176,7 @@ files:
 | `run-and-observe`   | daemon を起動し、偽の上流に届くかを見る     | `checkconf_exit`, `listen{proto,addr}`, `query`, `note`                                                        |
 | `run-and-dig`       | daemon を起動し、応答の中身を見る           | `checkconf_exit`, `starts`, `query`, `rcode`, `answer_contains`, `answer_count`, `answer_ttl`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `query_flags`, `flags_contains`, `flags_not_contains`, `ede_code`, `ede_text_contains`, `no_reply`, `client`, `note` |
 | `run-with-upstreams` | 問い合わせを記録し規則どおりに答える偽の上流（名前・型・RD・TCP の最初のバイト）を置き、daemon を起動して問い合わせる | `checkconf_exit`, `upstreams`, `query`, `rcode`, `answer_contains`, `answer_count`, `authority_contains`, `stderr_contains`, `stderr_not_contains`, `query_flags`, `flags_contains`, `flags_not_contains`, `ede_code`, `ede_text_contains`, `no_reply`, `client`, `note` |
+| `run-sequence`      | 偽の上流（任意）と daemon を起動し、同じ daemon に対して `steps` を順に実行する。問い合わせ、待ち、`unbound-control` | `checkconf_exit`, `upstreams`, `steps`, `stderr_contains`, `stderr_not_contains`, `note` |
 | `run-and-resolve`   | daemon を 53 番で起動し、`/etc/resolv.conf` をそこへ向けて `getent ahosts` を実行する | `checkconf_exit`, `lookup`, `lookup_exit`, `lookup_contains`, `lookup_empty`, `control_lookup`, `control_contains`, `note` |
 
 `unbound-checkconf` の `stderr_contains` / `stderr_not_contains` は標準出力と標準エラー出力をまとめて検索する。
@@ -213,11 +214,21 @@ CA 証明書は `unbound.conf` と同じ場所に `harness-ca.pem` として置�
 
 | キー | 意味 |
 | --- | --- |
-| `query_flags` | 問い合わせに立てるフラグ: `do`（EDNS の DO ビット）、`cd`、`ad`。省略すると EDNS なしで RD だけ。`[]` は同じ問い合わせを明示したもの（`dig` では、既定で立つ AD ビットを外す） |
+| `query_flags` | 問い合わせに立てるフラグ: `do`（EDNS の DO ビット）、`cd`、`ad`。`nord` は RD ビットを落とす。省略すると EDNS なしで RD だけ。`[]` は同じ問い合わせを明示したもの（`dig` では、既定で立つ AD ビットを外す） |
 | `flags_contains` / `flags_not_contains` | 応答のヘッダのフラグ。`dig` の表記（`ad`、`cd` など） |
 | `ede_code` / `ede_text_contains` | 応答の Extended DNS Error オプション。どちらかを書くと、問い合わせに EDNS を付ける |
 | `no_reply: true` | 何も返らないこと（`access-control: ... deny`）。答えの判定とは併用できない |
 | `client` | 問い合わせ元。省略すると 127.0.0.1 から 127.0.0.1 へ送り、定型部は `access-control: 127.0.0.0/8 allow` と `::1 allow` を持つ。`non-loopback` か `loopback6` では、定型部に `access-control` の行が**なく**、`0.0.0.0` と `::1` で待ち受け、問い合わせをコンテナ自身のループバックでない IPv4 アドレスか `::1` へ送る。ケースは Unbound の組み込みの既定値を見ることになる |
+
+`run-sequence` は、時間をおいて初めて見える挙動のためのもの。同じ問いへの2回目の答え、1回目の後に上流へ何が届くか、統計の値を見る。`steps` はリストで、各手順は次のどれか1つ。
+
+| 手順 | 意味 |
+| --- | --- |
+| `query` | 問い合わせを送る。上の client のキー（`client` を除く）、`run-and-dig` の答えのチェック、`answer_ttl_max` / `authority_ttl` / `authority_ttl_max`（キャッシュで減った TTL）、`upstream_new` / `upstream_new_min`（この手順の間に上流全体へ届いた問い合わせの数）を取る。ランナーは応答の後に1.5秒待ってから数える |
+| `sleep` | 指定した秒数だけ待つ |
+| `control` | `unbound-control <command>` を実行する。`control_contains` は出力に含まれるべき文字列。`remote-control:` 節はケースの config が自分で開く（`control-use-cert: no`） |
+
+偽の上流の答えの規則には `limit: N` を書ける。一致した最初の N 件にだけ答え、それより後は次の規則に回る。上流に1回だけ答えさせ、その後は失敗させるのに使う。
 
 DNSSEC のケースは、実行時に署名しない。RRSIG / DNSKEY / DS / NSEC は、
 テスト用の鍵で `tools/sign_fixtures.py` が事前に署名したもの（有効期間 2026-09-01〜2046-09-01）をケースに書き、

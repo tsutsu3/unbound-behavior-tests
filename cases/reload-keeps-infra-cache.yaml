@@ -1,0 +1,61 @@
+id: reload-keeps-infra-cache
+title:
+  en: unbound-control reload empties the message and RRset caches but keeps the infra cache
+  ja: unbound-control reload は message cache と rrset cache を空にするが、infra cache は残す
+chapter: '4.2'
+category: B
+versions:
+- 1.26.0
+source:
+  en: daemon/daemon.c daemon_cleanup() clears the RRset and message caches; services/cache/infra.c infra_adjust() keeps the infra cache when its size settings are unchanged
+  ja: daemon/daemon.c daemon_cleanup() は rrset cache と message cache を消す。services/cache/infra.c infra_adjust() は、サイズの設定が変わらなければ infra cache を残す
+manual:
+  en: 'doc/unbound-control.rst reload: Reload the server. This flushes the cache and reads the config file fresh.'
+  ja: 'doc/unbound-control.rst reload: Reload the server. This flushes the cache and reads the config file fresh.'
+layers:
+  en:
+  - unbound-control reload
+  - infra cache
+  ja:
+  - unbound-control reload
+  - infra cache
+status: verified
+config: |
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5932
+  remote-control:
+    control-enable: yes
+    control-interface: 127.0.0.1
+    control-port: 18953
+    control-use-cert: no
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5932
+    replies:
+    - qname: www.example.
+      qtype: A
+      aa: true
+      answer:
+      - www.example. 300 IN A 192.0.2.1
+  steps:
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - control: dump_infra
+    control_contains:
+    - 127.0.0.1@5932 example.
+  - control: reload
+  - control: dump_infra
+    control_contains:
+    - 127.0.0.1@5932 example.
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  note:
+    en: 'Category B: the manual says reload flushes the cache without saying which. The infra entry for the fake authority is still listed after the reload, while the answer has to be fetched again'
+    ja: '分類 B: man は reload が「the cache」を消すとだけ書き、どのキャッシュかを言わない。reload の後も偽の権威 DNS サーバーの infra cache の項目は残り、答えは取り直しになる'

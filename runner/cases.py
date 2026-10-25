@@ -34,6 +34,7 @@ COMMANDS = (
     "run-and-dig",
     "run-and-resolve",
     "run-with-upstreams",
+    "run-sequence",
 )
 
 TOP_LEVEL_REQUIRED = (
@@ -61,6 +62,7 @@ TOP_LEVEL_OPTIONAL = ("files",)
 #: sections.  Shared by run-and-dig and run-with-upstreams.
 #:
 #: * `query_flags` -- flags set on the query: `do` (EDNS DO bit), `cd`, `ad`.
+#:   `nord` clears the RD bit, which is otherwise always set.
 #: * `flags_contains` / `flags_not_contains` -- header flags of the reply,
 #:   lower case as dig prints them (`ad`, `cd`, `ra`, ...).
 #: * `ede_code` / `ede_text_contains` -- the Extended DNS Error option of the
@@ -81,7 +83,7 @@ CLIENT_KEYS = {
     "no_reply",
     "client",
 }
-QUERY_FLAGS = ("do", "cd", "ad")
+QUERY_FLAGS = ("do", "cd", "ad", "nord")
 CLIENTS = ("non-loopback", "loopback6")
 
 EXPECT_KEYS = {
@@ -114,6 +116,14 @@ EXPECT_KEYS = {
         "note",
     }
     | CLIENT_KEYS,
+    "run-sequence": {
+        "checkconf_exit",
+        "upstreams",
+        "steps",
+        "stderr_contains",
+        "stderr_not_contains",
+        "note",
+    },
     "run-and-resolve": {
         "checkconf_exit",
         "lookup",
@@ -160,7 +170,53 @@ UPSTREAM_KEYS = {
 #: can load it with `tls-cert-bundle: "harness-ca.pem"` or leave it out.
 TLS_KEYS = {"name"}
 TLS_HANDSHAKES = ("completed", "failed")
-REPLY_KEYS = {"qname", "qtype", "rcode", "aa", "answer", "authority", "additional"}
+REPLY_KEYS = {
+    "qname",
+    "qtype",
+    "rcode",
+    "aa",
+    "answer",
+    "authority",
+    "additional",
+    "limit",
+}
+#: `limit` lets a rule answer only its first N matching queries; after that
+#: the next matching rule (or silence) takes over.  run-sequence uses it to
+#: make an upstream answer once and fail afterwards.
+
+#: One step of run-sequence.  A step is exactly one of: a query with its
+#: checks, a pause, or an unbound-control command.
+#:
+#: * query steps take the client side checks of run-and-dig (except
+#:   `client`), plus `answer_ttl_max` / `authority_ttl` /
+#:   `authority_ttl_max` for a TTL that has counted down in the cache, and
+#:   `upstream_new` / `upstream_new_min`: how many queries reached the
+#:   upstreams, all of them together, while this step ran.
+#: * `sleep` is seconds (a number).
+#: * `control` is an unbound-control command line; `control_contains` lists
+#:   substrings its output must contain.  The case config opens the
+#:   `remote-control:` clause itself.
+STEP_QUERY_KEYS = {
+    "query",
+    "query_flags",
+    "rcode",
+    "answer_contains",
+    "answer_count",
+    "answer_ttl",
+    "answer_ttl_max",
+    "authority_contains",
+    "authority_ttl",
+    "authority_ttl_max",
+    "flags_contains",
+    "flags_not_contains",
+    "ede_code",
+    "ede_text_contains",
+    "no_reply",
+    "upstream_new",
+    "upstream_new_min",
+}
+STEP_SLEEP_KEYS = {"sleep"}
+STEP_CONTROL_KEYS = {"control", "control_contains"}
 
 
 class CaseError(ValueError):
@@ -256,14 +312,15 @@ def _parse_files(path: pathlib.Path, raw: dict) -> dict[str, str]:
     return dict(files)
 
 
-def _parse_upstreams(path: pathlib.Path, expect: dict) -> None:
-    """Validate expect.upstreams of a run-with-upstreams case."""
+def _parse_upstreams(path: pathlib.Path, expect: dict, need_query: bool = True) -> None:
+    """Validate expect.upstreams of a run-with-upstreams or run-sequence case."""
     ups = expect.get("upstreams")
     _require(
         isinstance(ups, list) and ups,
         f"{path.name}: expect.upstreams must be a non-empty list",
     )
-    _require("query" in expect, f"{path.name}: expect.query required")
+    if need_query:
+        _require("query" in expect, f"{path.name}: expect.query required")
     for i, up in enumerate(ups):
         where = f"{path.name}: expect.upstreams[{i}]"
         _require(isinstance(up, dict), f"{where} must be a mapping")
@@ -286,6 +343,11 @@ def _parse_upstreams(path: pathlib.Path, expect: dict) -> None:
                 _require(
                     all(isinstance(x, str) for x in rule.get(key, [])),
                     f"{where}.replies.{key} must be a list of RR strings",
+                )
+            if "limit" in rule:
+                _require(
+                    isinstance(rule["limit"], int) and rule["limit"] > 0,
+                    f"{where}.replies.limit must be a positive integer",
                 )
         _require(
             not (up.get("received_none") and up.get("received_contains")),
@@ -310,6 +372,61 @@ def _parse_upstreams(path: pathlib.Path, expect: dict) -> None:
                 up["tls_handshake"] in TLS_HANDSHAKES,
                 f"{where}.tls_handshake must be one of {TLS_HANDSHAKES}",
             )
+
+
+def _parse_steps(path: pathlib.Path, expect: dict) -> None:
+    """Validate expect.steps of a run-sequence case."""
+    steps = expect.get("steps")
+    _require(
+        isinstance(steps, list) and steps,
+        f"{path.name}: expect.steps must be a non-empty list",
+    )
+    for i, step in enumerate(steps):
+        where = f"{path.name}: expect.steps[{i}]"
+        _require(isinstance(step, dict), f"{where} must be a mapping")
+        if "query" in step:
+            unknown = set(step) - STEP_QUERY_KEYS
+            _require(not unknown, f"{where}: unknown keys {sorted(unknown)}")
+            for key in LIST_KEYS:
+                if key in step:
+                    _require(
+                        isinstance(step[key], list)
+                        and all(isinstance(x, str) and x for x in step[key]),
+                        f"{where}.{key} must be a list of non-empty strings",
+                    )
+            for key in (
+                "answer_ttl",
+                "answer_ttl_max",
+                "authority_ttl",
+                "authority_ttl_max",
+                "upstream_new",
+                "upstream_new_min",
+            ):
+                if key in step:
+                    _require(
+                        isinstance(step[key], int), f"{where}.{key} must be an integer"
+                    )
+            _parse_client(path, step)
+        elif "sleep" in step:
+            _require(
+                set(step) == STEP_SLEEP_KEYS
+                and isinstance(step["sleep"], (int, float))
+                and step["sleep"] > 0,
+                f"{where}: a sleep step is only `sleep: <seconds>`",
+            )
+        elif "control" in step:
+            unknown = set(step) - STEP_CONTROL_KEYS
+            _require(not unknown, f"{where}: unknown keys {sorted(unknown)}")
+            _require(
+                isinstance(step["control"], str) and step["control"],
+                f"{where}.control must be a command line",
+            )
+            _require(
+                all(isinstance(x, str) and x for x in step.get("control_contains", [])),
+                f"{where}.control_contains must be a list of non-empty strings",
+            )
+        else:
+            raise CaseError(f"{where}: a step needs query, sleep or control")
 
 
 def _parse_client(path: pathlib.Path, expect: dict) -> None:
@@ -480,6 +597,10 @@ def parse_case(path: pathlib.Path) -> Case:
             )
     if raw["command"] == "run-with-upstreams":
         _parse_upstreams(path, expect)
+    if raw["command"] == "run-sequence":
+        if "upstreams" in expect:
+            _parse_upstreams(path, expect, need_query=False)
+        _parse_steps(path, expect)
     if expect.get("starts") is False:
         clash = set(expect) & {
             "rcode",

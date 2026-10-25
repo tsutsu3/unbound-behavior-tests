@@ -1,0 +1,59 @@
+id: serve-expired-skips-refetch-for-five-seconds-after-failure
+title:
+  en: With serve-expired and the default client timeout, after a failed refetch the expired answer is returned for 5 seconds without trying to refetch
+  ja: serve-expired と既定の client timeout では、取り直しに失敗した後の5秒間、取り直しを試みずに期限切れの答えを返す
+chapter: '4.4'
+category: A
+versions:
+- 1.26.0
+source:
+  en: iterator/iterator.c error_response_cache() keeps the expired answer and sets serve_expired_norec_ttl to now + NORR_TTL (5 seconds); daemon/worker.c answer_from_cache() serves the expired answer without a refetch while now < serve_expired_norec_ttl, unless prefetch starts one through reply_and_prefetch()
+  ja: iterator/iterator.c error_response_cache() は期限切れの答えを残し、serve_expired_norec_ttl を now + NORR_TTL（5秒）にする。daemon/worker.c answer_from_cache() は now < serve_expired_norec_ttl の間、取り直さずに期限切れの答えを返す。prefetch が有効なら reply_and_prefetch() が取り直しを始める
+manual:
+  en: 'doc/unbound.conf.rst serve-expired: By default the expired answer will be used after a resolution attempt errored out or is taking more than serve-expired-client-timeout to resolve.'
+  ja: 'doc/unbound.conf.rst serve-expired: By default the expired answer will be used after a resolution attempt errored out or is taking more than serve-expired-client-timeout to resolve.'
+layers:
+  en:
+  - message cache
+  - serve-expired
+  ja:
+  - message cache
+  - serve-expired
+status: verified
+config: |
+  serve-expired: yes
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5924
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5924
+    replies:
+    - qname: www.example.
+      qtype: A
+      aa: true
+      answer:
+      - www.example. 2 IN A 192.0.2.1
+      limit: 1
+    - qname: www.example.
+      qtype: A
+      rcode: SERVFAIL
+  steps:
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - sleep: 3
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new: 0
+  note:
+    en: 'Category A: the 5 seconds are not in the manual. The fake authority answers the first query with TTL 2 and SERVFAIL afterwards. The second query''s refetch fails; the third, within 5 seconds, reaches nothing upstream'
+    ja: '分類 A: 5秒は man にない。偽の権威 DNS サーバーは最初の問い合わせに TTL 2 で答え、その後は SERVFAIL を返す。2回目の取り直しが失敗し、5秒以内の3回目では上流に何も届かない'

@@ -230,6 +230,35 @@ def display_config(config: str) -> str:
 # --- result table --------------------------------------------------------
 
 
+def step_text(step: dict) -> str:
+    """One run-sequence step as a table cell."""
+    if "sleep" in step:
+        return f"{step['sleep']}秒待つ"
+    if "control" in step:
+        text = f"`unbound-control {step['control']}`"
+        if step.get("control_contains"):
+            text += "。出力に " + "、".join(code(v) for v in step["control_contains"])
+        return text
+    parts = [f"{code(step['query'])} を問い合わせる"]
+    if step.get("query_flags"):
+        parts.append("フラグ " + "、".join(code(v) for v in step["query_flags"]))
+    if "rcode" in step:
+        parts.append(f"rcode は {code(step['rcode'])}")
+    if step.get("answer_contains"):
+        parts.append("ANSWER に " + "、".join(code(v) for v in step["answer_contains"]))
+    if "authority_ttl" in step:
+        parts.append(f"AUTHORITY の TTL は {step['authority_ttl']}")
+    if "authority_ttl_max" in step:
+        parts.append(f"AUTHORITY の TTL は {step['authority_ttl_max']} 以下")
+    if "answer_ttl_max" in step:
+        parts.append(f"ANSWER の TTL は {step['answer_ttl_max']} 以下")
+    if "upstream_new" in step:
+        parts.append(f"上流に届いた問い合わせは {step['upstream_new']} 件")
+    if "upstream_new_min" in step:
+        parts.append(f"上流に届いた問い合わせは {step['upstream_new_min']} 件以上")
+    return "。".join(parts)
+
+
 def result_rows(case: Case) -> list[tuple[str, str]]:
     e = case.expect
     rows: list[tuple[str, str]] = []
@@ -275,6 +304,8 @@ def result_rows(case: Case) -> list[tuple[str, str]]:
             )
         if up.get("tls_client_hello"):
             rows.append((f"上流 {addr} に届いたもの", "TLS の ClientHello"))
+    for i, step in enumerate(e.get("steps", []), 1):
+        rows.append((f"手順 {i}", step_text(step)))
     if "query" in e:
         rows.append(("問い合わせ", code(e["query"])))
     if "rcode" in e:

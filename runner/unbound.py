@@ -243,6 +243,22 @@ class UnboundProcess:
         return False
 
 
+CONTROL = os.environ.get("UNBOUND_CONTROL", "unbound-control")
+
+
+def run_control(conf: pathlib.Path, command: str) -> Run:
+    """Run `unbound-control -c <conf> <command>` against the running daemon."""
+    proc = subprocess.run(
+        [CONTROL, "-c", conf.name, *command.split()],
+        cwd=conf.parent,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=15,
+    )
+    return Run(proc.returncode, proc.stdout, proc.stderr)
+
+
 def parse_query(spec: str) -> tuple[str, str]:
     """`"example.com. A"` -> ("example.com.", "A")."""
     parts = spec.split()
@@ -260,7 +276,8 @@ def send_query(
 ) -> dns.message.Message | None:
     """Send the case's query; `flags` are from cases.QUERY_FLAGS.
 
-    Without flags the query is what it always was: no EDNS, only RD.  `do`
+    Without flags the query is what it always was: no EDNS, only RD (`nord`
+    clears it).  `do`
     needs EDNS; `edns` asks for EDNS without DO, which a case uses to get an
     Extended DNS Error back.
     """
@@ -275,6 +292,8 @@ def send_query(
         msg.flags |= dns.flags.CD
     if "ad" in flags:
         msg.flags |= dns.flags.AD
+    if "nord" in flags:
+        msg.flags &= ~dns.flags.RD
     try:
         return dns.query.udp(msg, addr, port=UNBOUND_PORT, timeout=timeout)
     except (OSError, dns.exception.DNSException):
@@ -307,6 +326,8 @@ def dig_flags(flags: tuple[str, ...] | None) -> list[str]:
         opts.append("+dnssec")
     if "cd" in flags:
         opts.append("+cdflag")
+    if "nord" in flags:
+        opts.append("+norecurse")
     return opts
 
 

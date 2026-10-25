@@ -1,0 +1,62 @@
+id: serve-expired-with-prefetch-refetches-after-failure
+title:
+  en: With serve-expired and prefetch, a query within 5 seconds of a failed refetch still starts a refetch
+  ja: serve-expired と prefetch を併用すると、取り直しの失敗から5秒以内の問い合わせでも取り直しを始める
+chapter: '4.4'
+category: A
+versions:
+- 1.26.0
+source:
+  en: iterator/iterator.c error_response_cache() keeps the expired answer and sets serve_expired_norec_ttl to now + NORR_TTL (5 seconds); daemon/worker.c answer_from_cache() serves the expired answer without a refetch while now < serve_expired_norec_ttl, unless prefetch starts one through reply_and_prefetch()
+  ja: iterator/iterator.c error_response_cache() は期限切れの答えを残し、serve_expired_norec_ttl を now + NORR_TTL（5秒）にする。daemon/worker.c answer_from_cache() は now < serve_expired_norec_ttl の間、取り直さずに期限切れの答えを返す。prefetch が有効なら reply_and_prefetch() が取り直しを始める
+manual:
+  en: 'doc/unbound.conf.rst serve-expired: By default the expired answer will be used after a resolution attempt errored out or is taking more than serve-expired-client-timeout to resolve.'
+  ja: 'doc/unbound.conf.rst serve-expired: By default the expired answer will be used after a resolution attempt errored out or is taking more than serve-expired-client-timeout to resolve.'
+layers:
+  en:
+  - message cache
+  - serve-expired
+  - prefetch
+  ja:
+  - message cache
+  - serve-expired
+  - prefetch
+status: verified
+config: |
+  serve-expired: yes
+  prefetch: yes
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5925
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5925
+    replies:
+    - qname: www.example.
+      qtype: A
+      aa: true
+      answer:
+      - www.example. 2 IN A 192.0.2.1
+      limit: 1
+    - qname: www.example.
+      qtype: A
+      rcode: SERVFAIL
+  steps:
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - sleep: 3
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  note:
+    en: 'Category A. Compare serve-expired-skips-refetch-for-five-seconds-after-failure: the only change is prefetch: yes'
+    ja: '分類 A。serve-expired-skips-refetch-for-five-seconds-after-failure と比べる。違いは prefetch: yes だけ'

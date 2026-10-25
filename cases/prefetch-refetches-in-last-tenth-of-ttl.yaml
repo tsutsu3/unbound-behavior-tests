@@ -1,0 +1,59 @@
+id: prefetch-refetches-in-last-tenth-of-ttl
+title:
+  en: 'With prefetch: yes, a cache hit in the last 10 percent of the TTL is answered from the cache and triggers a refetch'
+  ja: 'prefetch: yes では、TTL の最後の10%でのキャッシュヒットにキャッシュから答え、取り直しを始める'
+chapter: '4.4'
+category: documented
+versions:
+- 1.26.0
+source:
+  en: daemon/worker.c worker_handle_request() calls reply_and_prefetch() when rep->prefetch_ttl <= now; PREFETCH_TTL_CALC in util/data/msgparse.h is ttl - ttl/10
+  ja: daemon/worker.c worker_handle_request() は rep->prefetch_ttl <= now なら reply_and_prefetch() を呼ぶ。util/data/msgparse.h の PREFETCH_TTL_CALC は ttl - ttl/10
+manual:
+  en: 'doc/unbound.conf.rst prefetch: If yes, cache hits on message cache elements that are on their last 10 percent of their TTL value trigger a prefetch to keep the cache up to date.'
+  ja: 'doc/unbound.conf.rst prefetch: If yes, cache hits on message cache elements that are on their last 10 percent of their TTL value trigger a prefetch to keep the cache up to date.'
+layers:
+  en:
+  - message cache
+  - prefetch
+  ja:
+  - message cache
+  - prefetch
+status: verified
+config: |
+  prefetch: yes
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5923
+  remote-control:
+    control-enable: yes
+    control-interface: 127.0.0.1
+    control-port: 18953
+    control-use-cert: no
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5923
+    replies:
+    - qname: www.example.
+      qtype: A
+      aa: true
+      answer:
+      - www.example. 20 IN A 192.0.2.1
+  steps:
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - sleep: 16.8
+  - query: www.example. A
+    answer_contains:
+    - 192.0.2.1
+    upstream_new_min: 1
+  - control: stats_noreset
+    control_contains:
+    - total.num.prefetch=1
+  note:
+    en: 'Category documented: matches the manual. The answer has TTL 20, so the prefetch time is 18 seconds after it was stored; the second query is sent about 18.3 seconds after the first, counting the harness''s 1.5 second wait after each query'
+    ja: '分類 documented: man の記述どおり。答えの TTL は 20 なので、取り直しを始める時刻は保存から18秒後。ハーネスが各問い合わせの後に1.5秒待つので、2回目は1回目の約18.3秒後に送る'

@@ -1,0 +1,29 @@
+id: acl-allow-refuses-other-names-without-rd
+title:
+  en: "Under allow, a query without RD for a name outside local-data is refused with REFUSED"
+  ja: allow の問い合わせ元からの RD のない問い合わせは、local-data にない名前なら REFUSED になる
+chapter: "4.5"
+category: documented
+versions: ["1.26.0"]
+source:
+  en: "daemon/worker.c worker_handle_request(): after the local-zone, RPZ and downstream auth-zone stages decline, a query without RD from a client whose action is not allow_snoop gets REFUSED"
+  ja: "daemon/worker.c worker_handle_request(): local-zone、RPZ、downstream の auth-zone の段が答えなかった後、allow_snoop ではない問い合わせ元からの RD のない問い合わせには REFUSED を返す"
+manual:
+  en: "doc/unbound.conf.rst access-control, allow: It gives only access for recursion clients (which is what almost all clients need). Non-recursive queries are refused. The allow action does allow non-recursive queries to access the local-data that is configured. The reason is that this does not involve the Unbound server recursive lookup algorithm, and static data is served in the reply."
+  ja: "doc/unbound.conf.rst access-control の allow: It gives only access for recursion clients (which is what almost all clients need). Non-recursive queries are refused. The allow action does allow non-recursive queries to access the local-data that is configured. The reason is that this does not involve the Unbound server recursive lookup algorithm, and static data is served in the reply."
+layers:
+  en: ["access control after local zones"]
+  ja: ["local zone の後のアクセス制御"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.net. A"
+  query_flags: ["nord"]
+  rcode: "REFUSED"
+  note:
+    en: "Category documented: the result matches the manual. Paired with acl-allow-answers-local-data-without-rd"
+    ja: "分類 documented: man の記述どおり。acl-allow-answers-local-data-without-rd と組"

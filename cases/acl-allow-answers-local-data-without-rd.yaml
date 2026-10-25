@@ -1,0 +1,30 @@
+id: acl-allow-answers-local-data-without-rd
+title:
+  en: "Under allow, a query without RD still gets local-data: the local-zone answer comes before the RD check"
+  ja: allow の問い合わせ元でも、RD のない問い合わせに local-data は答える。local-zone の応答が RD の判定より先に来る
+chapter: "4.5"
+category: documented
+versions: ["1.26.0"]
+source:
+  en: "daemon/worker.c worker_handle_request() calls local_zones_answer() and jumps to send_reply when it answers; the check that refuses a query without RD from a client without allow_snoop comes only after local_zones_answer(), rpz_callback_from_worker_request() and auth_zones_downstream_answer() have all declined"
+  ja: "daemon/worker.c worker_handle_request() は local_zones_answer() が答えれば send_reply へ飛ぶ。allow_snoop のない問い合わせ元からの RD のない問い合わせを断る判定は、local_zones_answer()、rpz_callback_from_worker_request()、auth_zones_downstream_answer() がいずれも答えなかった後"
+manual:
+  en: "doc/unbound.conf.rst access-control, allow: It gives only access for recursion clients (which is what almost all clients need). Non-recursive queries are refused. The allow action does allow non-recursive queries to access the local-data that is configured. The reason is that this does not involve the Unbound server recursive lookup algorithm, and static data is served in the reply."
+  ja: "doc/unbound.conf.rst access-control の allow: It gives only access for recursion clients (which is what almost all clients need). Non-recursive queries are refused. The allow action does allow non-recursive queries to access the local-data that is configured. The reason is that this does not involve the Unbound server recursive lookup algorithm, and static data is served in the reply."
+layers:
+  en: ["access control after local zones"]
+  ja: ["local zone の後のアクセス制御"]
+status: verified
+config: |
+  local-zone: "example.com." static
+  local-data: "www.example.com. A 192.0.2.1"
+command: run-and-dig
+expect:
+  checkconf_exit: 0
+  query: "www.example.com. A"
+  query_flags: ["nord"]
+  rcode: "NOERROR"
+  answer_contains: ["192.0.2.1"]
+  note:
+    en: "Category documented: the result matches the manual. The harness allows 127.0.0.0/8, so the client gets the allow action. Paired with acl-allow-refuses-other-names-without-rd, it fixes that the RD check comes after the local-zone stage"
+    ja: "分類 documented: man の記述どおり。ハーネスは 127.0.0.0/8 を allow にしているので、問い合わせ元には allow が当たる。acl-allow-refuses-other-names-without-rd と組で、RD の判定が local-zone の段より後ろにあることを固定する"

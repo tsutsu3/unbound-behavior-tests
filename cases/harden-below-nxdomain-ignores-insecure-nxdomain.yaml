@@ -1,0 +1,47 @@
+id: harden-below-nxdomain-ignores-insecure-nxdomain
+title:
+  en: Without DNSSEC, an NXDOMAIN in the cache does not answer queries for names below it; they go upstream
+  ja: DNSSEC がなければ、キャッシュの NXDOMAIN はその下の名前への問い合わせに使われず、上流へ問い合わせる
+chapter: '4.3'
+category: documented
+versions:
+- 1.26.0
+source:
+  en: 'services/cache/dns.c dns_cache_lookup(): with harden-below-nxdomain it looks up the parents of the name in the message cache and answers NXDOMAIN only from an entry whose security status is sec_status_secure'
+  ja: 'services/cache/dns.c dns_cache_lookup(): harden-below-nxdomain が有効なら、問い合わせ名の親を message cache で探し、security status が sec_status_secure の項目からだけ NXDOMAIN で答える'
+manual:
+  en: 'doc/unbound.conf.rst harden-below-nxdomain: returns NXDOMAIN to queries for a name below another name that is already known to be NXDOMAIN. To try to avoid this only DNSSEC-secure NXDOMAINs are used, because the old software does not have DNSSEC.'
+  ja: 'doc/unbound.conf.rst harden-below-nxdomain: returns NXDOMAIN to queries for a name below another name that is already known to be NXDOMAIN. To try to avoid this only DNSSEC-secure NXDOMAINs are used, because the old software does not have DNSSEC.'
+layers:
+  en:
+  - message cache
+  - validator
+  ja:
+  - message cache
+  - validator
+status: verified
+config: |
+  aggressive-nsec: no
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5930
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5930
+    replies:
+    - rcode: NXDOMAIN
+      aa: true
+      authority:
+      - example. 300 IN SOA ns.example. host.example. 1 3600 900 604800 300
+  steps:
+  - query: nx.example. A
+    rcode: NXDOMAIN
+    upstream_new_min: 1
+  - query: a.nx.example. A
+    rcode: NXDOMAIN
+    upstream_new_min: 1
+  note:
+    en: Category documented. harden-below-nxdomain is at its default yes; no trust anchor, so the NXDOMAIN is not secure
+    ja: 分類 documented。harden-below-nxdomain は既定の yes。信頼アンカーがないので NXDOMAIN は secure にならない

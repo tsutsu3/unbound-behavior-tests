@@ -1,0 +1,48 @@
+id: negative-answer-ttl-counts-down-from-cache
+title:
+  en: A cached NXDOMAIN is returned with the SOA TTL reduced by the time it has been in the cache
+  ja: キャッシュした NXDOMAIN は、保存してからの秒数だけ SOA の TTL を減らして返る
+chapter: '4.3'
+category: documented
+versions:
+- 1.26.0
+source:
+  en: util/data/msgencode.c packed_rrset_encode() writes each TTL minus the time since it was stored
+  ja: util/data/msgencode.c packed_rrset_encode() は、保存してからの経過秒数を引いた TTL を書く
+manual:
+  en: 'RFC 2308 section 6: the TTL of the SOA is decremented when a negative answer is returned from the cache'
+  ja: 'RFC 2308 の 6.: キャッシュから否定応答を返すとき、SOA の TTL を減らす'
+layers:
+  en:
+  - message cache
+  ja:
+  - message cache
+status: verified
+config: |
+  stub-zone:
+    name: "example."
+    stub-addr: 127.0.0.1@5922
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  upstreams:
+  - addr: 127.0.0.1:5922
+    replies:
+    - qname: nx.example.
+      rcode: NXDOMAIN
+      aa: true
+      authority:
+      - example. 300 IN SOA ns.example. host.example. 1 3600 900 604800 300
+  steps:
+  - query: nx.example. A
+    rcode: NXDOMAIN
+    authority_ttl: 300
+    upstream_new_min: 1
+  - sleep: 3
+  - query: nx.example. A
+    rcode: NXDOMAIN
+    authority_ttl_max: 298
+    upstream_new: 0
+  note:
+    en: 'Category documented: matches the RFC. The fake authority''s SOA has TTL and MINIMUM 300'
+    ja: '分類 documented: RFC どおり。偽の権威 DNS サーバーの SOA は TTL も MINIMUM も 300'
