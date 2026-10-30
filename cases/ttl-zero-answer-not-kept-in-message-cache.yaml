@@ -7,8 +7,8 @@ category: A
 versions:
 - 1.26.0
 source:
-  en: 'services/cache/dns.c dns_cache_store(): a reply whose TTL is 0 has its RRsets stored but is not put in the message cache'
-  ja: 'services/cache/dns.c dns_cache_store(): TTL が0の応答は RRset を保存するが message cache には入れない'
+  en: 'services/cache/dns.c dns_cache_store_msg(): a reply whose TTL is 0 has its RRsets stored but is not put in the message cache'
+  ja: 'services/cache/dns.c dns_cache_store_msg(): TTL が0の応答は RRset を保存するが message cache には入れない'
 manual:
   en: none
   ja: none
