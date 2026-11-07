@@ -1,0 +1,27 @@
+id: checkconf-warns-duplicate-local-zone-different-spelling
+title:
+  en: "unbound-checkconf also prints the duplicate local-zone warning when the two names differ only in the trailing dot and letter case"
+  ja: "末尾ドットと大文字小文字だけが違うゾーン名の重複にも、unbound-checkconf は duplicate local-zone の警告を出す"
+chapter: "5.1"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "smallapp/unbound-checkconf.c localzonechecks() calls services/localzone.c local_zones_apply_cfg(). parse_dname() normalises the name and local_zone_cmp() ignores case, so lz_enter_zone_dname() reaches log_warn(\"duplicate local-zone %s\"). checkconf calls log_init(NULL, 0, NULL), so the warning goes to stderr"
+  ja: "smallapp/unbound-checkconf.c localzonechecks() が services/localzone.c local_zones_apply_cfg() を呼ぶ。parse_dname() が名前を正規化し、local_zone_cmp() は大文字小文字を区別しないので、lz_enter_zone_dname() の log_warn(\"duplicate local-zone %s\") に達する。checkconf は log_init(NULL, 0, NULL) なので警告は標準エラー出力に出る"
+manual:
+  en: "none (the man page says nothing about duplicate local-zone)"
+  ja: "none（重複 local-zone に関する記述が man にない）"
+layers:
+  en: ["zone name wire conversion and normalisation", "duplicate handling at zone registration", "checkconf extra checks"]
+  ja: ["ゾーン名のワイヤ変換と正規化", "ゾーン登録時の重複処理", "checkconf の追加検査"]
+status: verified
+config: |
+  local-zone: "example.com" static
+  local-zone: "EXAMPLE.com." refuse
+command: unbound-checkconf
+expect:
+  exit: 0
+  stderr_contains: "duplicate local-zone example.com."
+  note:
+    en: "Same result as checkconf-warns-duplicate-local-zone with identical spellings"
+    ja: "同じ綴りの checkconf-warns-duplicate-local-zone と同じ結果になる"

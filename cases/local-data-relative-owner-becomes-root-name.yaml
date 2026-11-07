@@ -1,0 +1,33 @@
+id: local-data-relative-owner-becomes-root-name
+title:
+  en: "A local-data owner name without a trailing dot is not completed with the zone name and becomes a name under the root"
+  ja: "末尾ドットのない local-data のオーナー名はゾーン名で補われず、ルートからの名前になる"
+chapter: "5.3"
+category: A
+versions: ["1.26.0"]
+source:
+  en: "services/localzone.c rrstr_get_rr_content() passes a NULL origin, and sldns/str2wire.c sldns_str2wire_dname_buf_origin() appends the origin only when rel && origin, so sldns_str2wire_dname_buf_rel() just adds the root label. \"nas\" becomes \"nas.\", which the home.arpa. zone does not cover"
+  ja: "services/localzone.c rrstr_get_rr_content() は origin に NULL を渡し、sldns/str2wire.c sldns_str2wire_dname_buf_origin() は rel && origin のときだけ origin を補うので、sldns_str2wire_dname_buf_rel() がルートラベルを足すだけになる。\"nas\" は \"nas.\" になり、home.arpa. のゾーンには入らない"
+manual:
+  en: "none (the local-data: entry does not say how a name without a trailing dot is read)"
+  ja: "none（local-data: の項に、末尾ドットのない名前の読み方の記述がない）"
+layers:
+  en: ["RR owner name to dname conversion", "zone lookup for local-data"]
+  ja: ["RR オーナー名の dname 変換", "local-data の入れ先ゾーンの選択"]
+status: verified
+config: |
+  local-zone: "home.arpa." static
+  local-data: "nas A 192.168.1.10"
+command: run-sequence
+expect:
+  checkconf_exit: 0
+  steps:
+  - query: nas. A
+    rcode: NOERROR
+    answer_contains:
+    - 192.168.1.10
+  - query: nas.home.arpa. A
+    rcode: NXDOMAIN
+  note:
+    en: "unbound-checkconf accepts it without a warning. The name intended as nas.home.arpa. answers as nas."
+    ja: "unbound-checkconf は警告なしで通す。nas.home.arpa. のつもりの名前が nas. として答える"

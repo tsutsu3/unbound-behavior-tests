@@ -27,6 +27,7 @@ expect:
   checkconf_exit: 0
   query: "example.com. A"
   rcode: "NXDOMAIN"
+  stderr_contains: "duplicate local-zone example.com."
   note:
     en: "The refuse in the main file loses and the static from the included file remains. The intuition that your own unbound.conf is stronger than shared settings does not hold. Only the position of the include: line decides"
     ja: "本体に書いた refuse が負けて、include 先の static が残る。「自分の unbound.conf は共通設定より強い」という直感は成り立たない。決めるのは include: 行の位置だけ"
