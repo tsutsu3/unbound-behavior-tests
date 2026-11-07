@@ -1,7 +1,7 @@
 id: forward-addr-name-implies-port-853
 title:
   en: "Adding #name alone changes the destination port to 853, and TLS is never consulted"
-  ja: '#name を付けるだけで宛先ポートが 853 になり、TLS かどうかは参照されない'
+  ja: '#name を付けるだけで宛先ポートが853になり、TLS かどうかは参照されない'
 chapter: "6.4"
 category: B
 versions: ["1.26.0"]

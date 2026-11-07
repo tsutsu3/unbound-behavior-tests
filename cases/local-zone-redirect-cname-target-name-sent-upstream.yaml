@@ -1,7 +1,7 @@
 id: local-zone-redirect-cname-target-name-sent-upstream
 title:
   en: "The query Unbound sends upstream for a redirect zone's CNAME is for the target name"
-  ja: redirect ゾーンの CNAME で Unbound が上流へ送る問い合わせは、ターゲットの名前についてのもの
+  ja: redirect ゾーンの CNAME で Unbound が外へ送る問い合わせは、ターゲットの名前についてのもの
 chapter: "5.4"
 category: C
 versions: ["1.26.0"]

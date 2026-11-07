@@ -1,7 +1,7 @@
 id: local-data-cname-in-static-zone-not-chased
 title:
   en: "In a static zone, an A query for a name with only a CNAME gets the CNAME alone, even when its target is in the same zone"
-  ja: static ゾーンで CNAME だけを持つ名前に A を問うと、ターゲットが同じゾーンにあっても CNAME だけが返る
+  ja: static ゾーンで CNAME だけを持つ名前に A を問い合わせると、ターゲットが同じゾーンにあっても CNAME だけが返る
 chapter: "5.5"
 category: C
 versions: ["1.26.0"]

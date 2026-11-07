@@ -1,7 +1,7 @@
 id: local-zone-redirect-cname-wildcard-not-expanded-for-cname-query
 title:
   en: "A wildcard CNAME target in a redirect zone is expanded only for non-CNAME queries; a CNAME query gets the literal *"
-  ja: redirect ゾーンの CNAME ターゲットのワイルドカードは CNAME 以外の問い合わせでだけ展開され、CNAME で問うと * のまま返る
+  ja: redirect ゾーンの CNAME ターゲットのワイルドカードは CNAME 以外の問い合わせでだけ展開され、CNAME で問い合わせると * のまま返る
 chapter: "5.4"
 category: B
 versions: ["1.26.0"]

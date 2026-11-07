@@ -1,7 +1,7 @@
 id: local-zone-redirect-cname-target-skips-local-zones
 title:
   en: "The CNAME target of a redirect zone is resolved upstream even when a local-zone covers it"
-  ja: redirect ゾーンの CNAME のターゲットは、local-zone が覆っていても上流で解決される
+  ja: redirect ゾーンの CNAME のターゲットは、local-zone が覆っていても外で解決される
 chapter: "5.4"
 category: C
 versions: ["1.26.0"]

@@ -1,7 +1,7 @@
 id: forward-addr-name-ignores-tls-port-setting
 title:
   en: "With #name the default port is the compile-time constant 853, not the tls-port: setting"
-  ja: '#name のときの既定ポートは tls-port: の設定値ではなくコンパイル時定数 853 である'
+  ja: '#name のときの既定ポートは tls-port: の設定値ではなくコンパイル時定数853である'
 chapter: "6.4"
 category: B
 versions: ["1.26.0"]

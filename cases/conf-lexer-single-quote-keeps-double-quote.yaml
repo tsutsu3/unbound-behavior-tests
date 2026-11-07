@@ -1,7 +1,7 @@
 id: conf-lexer-single-quote-keeps-double-quote
 title:
   en: "With single quotes the inner double quotes stay in the value, so the TXT is one character-string"
-  ja: 単一引用符で囲むと中の二重引用符が値として残り TXT が 1 つの character-string になる
+  ja: 単一引用符で囲むと中の二重引用符が値として残り TXT が1つの character-string になる
 chapter: "5.2"
 category: C
 versions: ["1.26.0"]

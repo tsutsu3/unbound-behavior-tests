@@ -249,13 +249,13 @@ def step_text(step: dict) -> str:
     if "authority_ttl" in step:
         parts.append(f"AUTHORITY の TTL は {step['authority_ttl']}")
     if "authority_ttl_max" in step:
-        parts.append(f"AUTHORITY の TTL は {step['authority_ttl_max']} 以下")
+        parts.append(f"AUTHORITY の TTL は{step['authority_ttl_max']}以下")
     if "answer_ttl_max" in step:
-        parts.append(f"ANSWER の TTL は {step['answer_ttl_max']} 以下")
+        parts.append(f"ANSWER の TTL は{step['answer_ttl_max']}以下")
     if "upstream_new" in step:
-        parts.append(f"上流に届いた問い合わせは {step['upstream_new']} 件")
+        parts.append(f"上流に届いた問い合わせは{step['upstream_new']}件")
     if "upstream_new_min" in step:
-        parts.append(f"上流に届いた問い合わせは {step['upstream_new_min']} 件以上")
+        parts.append(f"上流に届いた問い合わせは{step['upstream_new_min']}件以上")
     return "。".join(parts)
 
 
@@ -548,7 +548,7 @@ def paid_index_page(rows: list[tuple[Case, str, str]]) -> str:
         ),
         (
             f"Unbound {VERSION} で確かめた挙動のうち、公式の説明に書かれていないもの"
-            f"（分類 A、{len(rows)} 件）を一覧にしています[^categories]。"
+            f"（分類 A、{len(rows)}件）を一覧にしています[^categories]。"
             "挙動欄のリンク先に、各項目の設定、結果、根拠を示しています。"
             f"分類 C と B は、{free_links()}にあります。\n"
         ),
